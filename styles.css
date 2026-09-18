@@ -24,6 +24,11 @@ h1, h2, h3, p { margin-top: 0; }
 h1 { margin-bottom: 0; font-family: "STKaiti", "KaiTi", serif; font-size: 30px; font-weight: 700; }
 h1 span { color: var(--red); font-size: 17px; }
 .icon-button, .close-button { border: 0; background: #fff; border-radius: 50%; width: 44px; height: 44px; font-size: 28px; box-shadow: 0 6px 18px rgba(65,48,29,.1); cursor: pointer; }
+.top-actions { display: flex; align-items: center; gap: 9px; }
+.cloud-button { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.65); color: var(--muted); cursor: pointer; }
+.cloud-button span { width: 8px; height: 8px; border-radius: 50%; background: #b9b1a5; }
+.cloud-button b { font-size: 11px; font-weight: 600; }.cloud-button.syncing span { background: var(--yellow); animation: pulse 1s infinite; }.cloud-button.online span { background: var(--green); }.cloud-button.error span { background: var(--red); }
+@keyframes pulse { 50% { opacity: .35; } }
 
 .hero { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; padding: 22px; margin-bottom: 18px; border-radius: 25px; color: #fff9ef; background: var(--red); box-shadow: 0 16px 35px rgba(180,61,44,.22); }
 .hero::after { content: "习"; position: absolute; right: 104px; top: -40px; color: rgba(255,255,255,.08); font: 130px "STKaiti", serif; transform: rotate(-8deg); }
@@ -85,6 +90,7 @@ dialog form { padding: 25px; }.dialog-head { display: flex; justify-content: spa
 label { display: block; margin: 16px 2px 7px; font-size: 13px; font-weight: 700; }label span { color: var(--muted); font-weight: 400; }
 input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; border-radius: 13px; outline: 0; background: white; font-size: 16px; }textarea { resize: none; font: 28px "STKaiti", serif; }input:focus, textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(215,82,63,.1); }
 .field-help { margin: 5px 2px 0; color: var(--muted); font-size: 10px; }.dialog-head + label { margin-top: 0; }dialog .primary-button { margin-top: 22px; }
+.cloud-illustration { margin: -4px 0 8px; text-align: center; font-size: 48px; }.cloud-copy { color: var(--muted); text-align: center; font-size: 13px; line-height: 1.7; }.disconnect-button { display: none; width: 100%; margin-top: 12px; padding: 10px; border: 0; background: none; color: var(--red); font-size: 12px; }.disconnect-button.show { display: block; }.config-note { margin: 14px 5px 0; color: var(--muted); font-size: 10px; line-height: 1.5; text-align: center; }
 .toast { position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom)); z-index: 10; transform: translate(-50%, 20px); padding: 10px 17px; border-radius: 30px; background: var(--ink); color: white; font-size: 12px; opacity: 0; pointer-events: none; transition: .25s; }.toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (max-width: 360px) { .app-shell { padding-left: 15px; padding-right: 15px; }.word-card { min-height: 325px; }.big-word { font-size: 125px; }.rating-buttons { gap: 6px; } }
 @media (min-width: 650px) { body { background: #e9e1d5; }.app-shell { background: var(--paper); box-shadow: 0 0 60px rgba(65,48,29,.1); } }

@@ -18,7 +18,10 @@
         <p class="eyebrow" id="todayLabel"></p>
         <h1>字时光 <span>✦</span></h1>
       </div>
-      <button class="icon-button" id="openAdd" aria-label="添加汉字">＋</button>
+      <div class="top-actions">
+        <button class="cloud-button" id="openCloud" aria-label="家庭云同步"><span id="cloudDot"></span><b id="cloudLabel">本地</b></button>
+        <button class="icon-button" id="openAdd" aria-label="添加汉字">＋</button>
+      </div>
     </header>
 
     <section class="hero" aria-labelledby="heroTitle">
@@ -102,7 +105,25 @@
     </form>
   </dialog>
 
+  <dialog id="cloudDialog">
+    <form id="cloudForm" method="dialog">
+      <div class="dialog-head">
+        <div><p class="eyebrow">多设备共享</p><h2>连接家庭字库</h2></div>
+        <button type="button" class="close-button" id="closeCloud">×</button>
+      </div>
+      <div class="cloud-illustration">☁️</div>
+      <p class="cloud-copy">家人在不同手机上输入相同口令，就能共享字库和复习进度。</p>
+      <label for="familyCode">家庭口令</label>
+      <input id="familyCode" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 位，建议字母加数字" required />
+      <p class="field-help">口令不会上传，请务必由家人自行记住。</p>
+      <button class="primary-button" id="connectCloud" type="submit">连接并同步</button>
+      <button class="disconnect-button" id="disconnectCloud" type="button">断开这个家庭</button>
+      <p class="config-note" id="cloudConfigNote"></p>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status"></div>
+  <script src="cloud-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
