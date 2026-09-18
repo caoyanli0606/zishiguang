@@ -15,7 +15,8 @@ let familyId = localStorage.getItem(FAMILY_KEY) || '';
 let syncTimer = null;
 let isSyncing = false;
 
-const cloudConfigured = () => /^https:\/\/.+\.supabase\.co\/?$/.test(CLOUD.url || '') && Boolean(CLOUD.publishableKey);
+const supabaseBaseUrl = () => (CLOUD.url || '').trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/$/, '');
+const cloudConfigured = () => /^https:\/\/.+\.supabase\.co$/i.test(supabaseBaseUrl()) && Boolean(CLOUD.publishableKey);
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
 function saveWords(sync = true) {
@@ -61,7 +62,7 @@ async function pullAndMergeCloud(showMessage = false) {
   isSyncing = true;
   setCloudStatus('syncing', '同步中');
   try {
-    const endpoint = `${CLOUD.url.replace(/\/$/, '')}/rest/v1/family_data?family_id=eq.${familyId}&select=payload`;
+    const endpoint = `${supabaseBaseUrl()}/rest/v1/family_data?family_id=eq.${familyId}&select=payload`;
     const response = await fetch(endpoint, { headers: cloudHeaders() });
     if (!response.ok) throw new Error(`读取失败 (${response.status})`);
     const rows = await response.json();
@@ -85,7 +86,7 @@ async function pullAndMergeCloud(showMessage = false) {
 
 async function pushCloudNow() {
   if (!cloudConfigured() || !familyId || !navigator.onLine) return;
-  const endpoint = `${CLOUD.url.replace(/\/$/, '')}/rest/v1/family_data?on_conflict=family_id`;
+  const endpoint = `${supabaseBaseUrl()}/rest/v1/family_data?on_conflict=family_id`;
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: cloudHeaders({ 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
