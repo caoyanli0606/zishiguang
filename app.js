@@ -194,6 +194,7 @@ function renderCard() {
 }
 
 function rateWord(level) {
+  window.speechSynthesis?.cancel();
   const current = queue[queueIndex];
   const word = words.find((item) => item.id === current.id);
   const days = level === 1 ? 0 : level === 2 ? 2 : 7;
@@ -229,6 +230,23 @@ function showToast(message) {
   toast.classList.add('show');
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+function speakCurrentWord(event) {
+  event.stopPropagation();
+  const char = $('#reviewWord').textContent;
+  if (!('speechSynthesis' in window)) return showToast('当前浏览器不支持语音朗读');
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(char);
+  utterance.lang = 'zh-CN';
+  utterance.rate = 0.72;
+  utterance.pitch = 1;
+  const chineseVoice = window.speechSynthesis.getVoices().find((voice) => /^zh[-_]/i.test(voice.lang));
+  if (chineseVoice) utterance.voice = chineseVoice;
+  const button = $('#speakWord');
+  utterance.onstart = () => button.classList.add('speaking');
+  utterance.onend = utterance.onerror = () => button.classList.remove('speaking');
+  window.speechSynthesis.speak(utterance);
 }
 
 function openCloudDialog() {
@@ -280,6 +298,7 @@ $('#addForm').addEventListener('submit', addWords);
 $('#startReview').addEventListener('click', startReview);
 $('#exitReview').addEventListener('click', () => { showView('homeView'); renderHome(); });
 $('#wordCard').addEventListener('click', () => $('#wordCard').classList.toggle('revealed'));
+$('#speakWord').addEventListener('click', speakCurrentWord);
 document.querySelectorAll('[data-rating]').forEach((button) => button.addEventListener('click', () => rateWord(Number(button.dataset.rating))));
 $('#backHome').addEventListener('click', () => { showView('homeView'); renderHome(); });
 
