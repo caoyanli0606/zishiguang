@@ -1,0 +1,10 @@
+{
+  "name": "字时光 · 识字复习",
+  "short_name": "字时光",
+  "description": "每天一点，轻松巩固认识的汉字。",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f1e8",
+  "theme_color": "#f6f1e8",
+  "lang": "zh-CN"
+}
