@@ -290,7 +290,15 @@ $('#wordCard').addEventListener('touchend', (e) => {
   if (Math.abs(distance) > 75) rateWord(distance > 0 ? 3 : 1);
 }, { passive: true });
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  let reloadingForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloadingForUpdate) return;
+    reloadingForUpdate = true;
+    window.location.reload();
+  });
+  navigator.serviceWorker.register('./sw.js').then((registration) => registration.update()).catch(() => {});
+}
 window.addEventListener('online', () => pullAndMergeCloud());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullAndMergeCloud(); });
 setCloudStatus(familyId && cloudConfigured() ? 'online' : '', familyId && cloudConfigured() ? '云同步' : (cloudConfigured() ? '未连接' : '本地'));
