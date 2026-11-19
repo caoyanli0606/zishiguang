@@ -77,10 +77,11 @@ h1 span { color: var(--red); font-size: 17px; }
 .game-heading .eyebrow { margin-bottom: 2px; }
 .game-heading h2 { margin: 0; font: 700 21px "STKaiti", serif; }
 .game-heading > span { flex: none; padding: 6px 9px; border-radius: 20px; background: rgba(215,82,63,.08); color: var(--red-dark); font-size: 10px; font-weight: 700; }
-.review-overview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
-.overview-word { display: flex; min-width: 0; min-height: 82px; flex-direction: column; align-items: center; justify-content: center; padding: 8px 2px; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.72); cursor: pointer; }
+.review-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.overview-word { display: grid; min-width: 0; min-height: 94px; grid-template-columns: 54px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.72); cursor: pointer; text-align: left; }
 .overview-word span { width: 100%; overflow: hidden; color: var(--red-dark); font-size: 11px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-.overview-word b { margin-top: 4px; font: 700 30px/1 "STKaiti", serif; }
+.overview-word b { grid-column: 1; grid-row: 2; text-align: center; font: 700 32px/1 "STKaiti", serif; }
+.overview-word small { grid-column: 2; grid-row: 1 / 3; color: var(--muted); font-size: 11px; line-height: 1.7; }
 .game-tip { margin: -8px 0 15px; color: var(--muted); font-size: 11px; }
 .pair-board { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .pair-column { display: grid; gap: 9px; }
@@ -109,7 +110,10 @@ h1 span { color: var(--red); font-size: 17px; }
 .speak-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .speak-button span { font-size: 11px; font-weight: 700; }.speak-button.speaking svg { animation: speakerPulse .55s ease infinite alternate; }
 @keyframes speakerPulse { to { transform: scale(1.22); opacity: .55; } }
-.memory-cue { z-index: 1; min-height: 25px; margin-top: 20px; color: var(--red-dark); font-size: 15px; opacity: 0; transform: translateY(5px); transition: .2s; }
+.memory-cue { z-index: 1; display: flex; min-height: 54px; margin-top: 18px; flex-direction: column; align-items: center; gap: 4px; color: var(--red-dark); font-size: 15px; opacity: 0; transform: translateY(5px); transition: .2s; }
+.memory-cue strong { font-size: 18px; letter-spacing: .06em; }
+.memory-cue span { color: var(--ink); font-size: 13px; }
+.memory-cue small { max-width: 260px; color: var(--muted); font-size: 10px; }
 .word-card.revealed { box-shadow: 0 25px 65px rgba(79,117,93,.18); }.word-card.revealed .memory-cue { opacity: 1; transform: none; }
 .word-card.revealed .card-hint { opacity: 0; }
 .card-date { position: absolute; bottom: 35px; z-index: 1; color: #aaa095; font-size: 11px; }
@@ -147,9 +151,9 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .review-mode-tabs button { font-size: 10px; }
   .game-panel { min-height: 350px; padding: 16px; }
   .review-overview-grid { gap: 7px; }
-  .overview-word { min-height: 72px; border-radius: 14px; }
+  .overview-word { min-height: 88px; padding: 8px; border-radius: 14px; }
   .overview-word span { font-size: 10px; }
-  .overview-word b { font-size: 27px; }
+  .overview-word b { font-size: 28px; }
 }
 @media (min-width: 650px) { .app-shell { background: rgba(246,241,232,.95); box-shadow: 0 0 60px rgba(65,48,29,.1); } }
 @media (min-width: 720px) {
@@ -190,8 +194,8 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .word-card { min-height: 300px; }
   .game-panel { min-height: 300px; padding: 16px 20px; }
   .game-heading { margin-bottom: 11px; }
-  .review-overview-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 7px; }
-  .overview-word { min-height: 70px; }
+  .review-overview-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+  .overview-word { min-height: 76px; }
   .pair-board { grid-template-columns: 1fr 1fr; }
   .pair-column { grid-template-columns: repeat(2, 1fr); }
   .listen-play-button { margin: 0 auto 13px; }
