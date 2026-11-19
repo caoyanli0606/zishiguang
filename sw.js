@@ -1,5 +1,5 @@
-const CACHE = 'zishiguang-v10';
-const FILES = ['./', './index.html', './styles.css', './cloud-config.js', './app.js', './manifest.webmanifest'];
+const CACHE = 'zishiguang-v14';
+const FILES = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
@@ -18,7 +18,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  const mustBeFresh = event.request.mode === 'navigate' || url.pathname.endsWith('/cloud-config.js');
+  const mustBeFresh = event.request.mode === 'navigate';
   if (mustBeFresh) {
     event.respondWith(
       fetch(event.request)
