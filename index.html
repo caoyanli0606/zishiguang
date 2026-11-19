@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=18" />
+  <link rel="stylesheet" href="styles.css?v=20" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -112,23 +112,11 @@
         <div><p class="eyebrow">小学识字表</p><h2>选择课本</h2></div>
         <button class="mini-add-button" id="addTextbook" type="button">＋ 录入</button>
       </div>
-      <div class="textbook-filters">
-        <label for="gradeFilter">年级</label>
-        <select id="gradeFilter">
-          <option value="all">全部年级</option>
-          <option value="1">一年级</option><option value="2">二年级</option><option value="3">三年级</option>
-          <option value="4">四年级</option><option value="5">五年级</option><option value="6">六年级</option>
-        </select>
-        <label for="semesterFilter">学期</label>
-        <select id="semesterFilter">
-          <option value="all">上下册</option><option value="1">上册</option><option value="2">下册</option>
-        </select>
-      </div>
       <div class="textbook-summary">
-        <span>当前共 <b id="filteredTextbookCount">0</b> 个字</span>
+        <span>全部课本共 <b id="filteredTextbookCount">0</b> 个字</span>
         <span>已认识 <b id="knownTextbookCount">0</b> 个</span>
       </div>
-      <button class="primary-button textbook-review-button" id="startTextbookReview" type="button">按顺序复习当前识字表</button>
+      <button class="primary-button textbook-review-button" id="startTextbookReview" type="button">按顺序复习全部识字表</button>
       <div class="lesson-review-tools" id="lessonReviewTools" hidden>
         <div><b>组合课时</b><span>已选 <strong id="selectedLessonCount">0</strong> 个课时</span></div>
         <button id="toggleAllLessons" type="button">全选</button>
@@ -189,8 +177,8 @@
   </dialog>
 
   <div id="toast" class="toast" role="status"></div>
-  <script src="cloud-config.js?v=19"></script>
-  <script src="app.js?v=19"></script>
+  <script src="cloud-config.js?v=20"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>
 
