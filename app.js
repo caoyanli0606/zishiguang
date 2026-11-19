@@ -241,7 +241,7 @@ function renderTextbook() {
         const tiles = entries.map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
           <span class="level-dot"></span><b>${word.char}</b><small>${levelText(word.level)}</small>
         </button>`).join('');
-        return `<details class="lesson-card"><summary class="lesson-card-head"><div><h4>${escapeHtml(lessonName)}</h4><small>${entries.length} 个字</small></div><button type="button" data-edit-lesson="${encodedKey}">编辑</button><span class="lesson-toggle"></span></summary><div class="lesson-select-row"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><b>选择此课时参加乱序复习</b></div><div class="word-list">${tiles}</div></details>`;
+        return `<details class="lesson-card"><summary class="lesson-card-head"><div><h4>${escapeHtml(lessonName)}</h4><small>${entries.length} 个字</small></div><div class="lesson-actions"><button class="lesson-review-button" type="button" data-review-lesson="${encodedKey}">复习</button><button type="button" data-edit-lesson="${encodedKey}">编辑</button></div><span class="lesson-toggle"></span></summary><div class="lesson-select-row"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><b>选择此课时参加乱序复习</b></div><div class="word-list">${tiles}</div></details>`;
       }).join('');
       return `<details class="textbook-unit"><summary class="textbook-unit-head"><h4>${escapeHtml(unitName)}</h4><span>${lessons.size} 个课时 · ${unitCount} 个字</span><i class="hierarchy-toggle"></i></summary><div class="textbook-unit-body">${lessonsHtml}</div></details>`;
     }).join('');
@@ -316,6 +316,16 @@ function addTextbookWords(event) {
 function startTextbookReview() {
   queue = sortTextbookWords(getFilteredTextbookWords()).map((word) => ({ ...word, source: 'textbook' }));
   if (!queue.length) return;
+  reviewContext = 'textbook';
+  queueIndex = 0;
+  reviewedCount = 0;
+  showView('reviewView');
+  renderCard();
+}
+
+function startLessonReview(key) {
+  queue = sortTextbookWords(textbookWords.filter((word) => lessonKey(word) === key)).map((word) => ({ ...word, source: 'textbook' }));
+  if (!queue.length) return showToast('这个课时还没有生字');
   reviewContext = 'textbook';
   queueIndex = 0;
   reviewedCount = 0;
@@ -556,11 +566,13 @@ $('#textbookWordList').addEventListener('change', (event) => {
   updateLessonSelectionUI();
 });
 $('#textbookWordList').addEventListener('click', (event) => {
-  const button = event.target.closest('[data-edit-lesson]');
-  if (!button) return;
+  const reviewButton = event.target.closest('[data-review-lesson]');
+  const editButton = event.target.closest('[data-edit-lesson]');
+  if (!reviewButton && !editButton) return;
   event.preventDefault();
   event.stopPropagation();
-  openTextbookDialog(decodeURIComponent(button.dataset.editLesson));
+  if (reviewButton) startLessonReview(decodeURIComponent(reviewButton.dataset.reviewLesson));
+  else openTextbookDialog(decodeURIComponent(editButton.dataset.editLesson));
 });
 
 let touchStartX = 0;
