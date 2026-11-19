@@ -181,9 +181,7 @@ function semesterText(semester) {
 }
 
 function getFilteredTextbookWords() {
-  const grade = $('#gradeFilter').value;
-  const semester = $('#semesterFilter').value;
-  return textbookWords.filter((word) => (grade === 'all' || String(word.grade) === grade) && (semester === 'all' || String(word.semester) === semester));
+  return textbookWords;
 }
 
 function lessonKey(word) {
@@ -209,7 +207,7 @@ function updateLessonSelectionUI() {
   $('#lessonReviewTools').hidden = textbookWords.length === 0;
   $('#shuffleLessonReview').hidden = selectedCount === 0;
   $('#selectedLessonCount').textContent = selectedCount;
-  $('#toggleAllLessons').textContent = visibleKeys.length && visibleKeys.every((key) => selectedLessonKeys.has(key)) ? '取消全选当前' : '全选当前';
+  $('#toggleAllLessons').textContent = visibleKeys.length && visibleKeys.every((key) => selectedLessonKeys.has(key)) ? '取消全选' : '全选课时';
 }
 
 function renderTextbook() {
@@ -245,9 +243,9 @@ function renderTextbook() {
         </button>`).join('');
         return `<details class="lesson-card"><summary class="lesson-card-head"><div><h4>${escapeHtml(lessonName)}</h4><small>${entries.length} 个字</small></div><button type="button" data-edit-lesson="${encodedKey}">编辑</button><span class="lesson-toggle"></span></summary><div class="lesson-select-row"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><b>选择此课时参加乱序复习</b></div><div class="word-list">${tiles}</div></details>`;
       }).join('');
-      return `<section class="textbook-unit"><div class="textbook-unit-head"><h4>${escapeHtml(unitName)}</h4><span>${lessons.size} 个课时 · ${unitCount} 个字</span></div>${lessonsHtml}</section>`;
+      return `<details class="textbook-unit"><summary class="textbook-unit-head"><h4>${escapeHtml(unitName)}</h4><span>${lessons.size} 个课时 · ${unitCount} 个字</span><i class="hierarchy-toggle"></i></summary><div class="textbook-unit-body">${lessonsHtml}</div></details>`;
     }).join('');
-    return `<section class="textbook-group"><div class="textbook-group-head"><h3>${gradeText(book.grade)} · ${semesterText(book.semester)}</h3><span>${lessonCount} 个课时 · ${bookCount} 个字</span></div>${unitsHtml}</section>`;
+    return `<details class="textbook-group"><summary class="textbook-group-head"><h3>${gradeText(book.grade)}${semesterText(book.semester)}</h3><span>${book.units.size} 个单元 · ${lessonCount} 个课时 · ${bookCount} 个字</span><i class="hierarchy-toggle"></i></summary><div class="textbook-group-body">${unitsHtml}</div></details>`;
   }).join('');
   updateLessonSelectionUI();
 }
@@ -269,10 +267,6 @@ function openTextbookDialog(key = null) {
     $('#textbookUnit').value = first.unit || '未分课时';
     $('#textbookInput').value = entries.map((word) => word.char).join('');
   }
-  const grade = $('#gradeFilter').value;
-  const semester = $('#semesterFilter').value;
-  if (!isEditing && grade !== 'all') $('#textbookGrade').value = grade;
-  if (!isEditing && semester !== 'all') $('#textbookSemester').value = semester;
   showDialog($('#textbookDialog'));
   setTimeout(() => $('#textbookInput').focus(), 100);
 }
@@ -313,8 +307,6 @@ function addTextbookWords(event) {
     added += 1;
   });
   saveTextbookWords();
-  $('#gradeFilter').value = String(grade);
-  $('#semesterFilter').value = String(semester);
   renderTextbook();
   closeDialog($('#textbookDialog'));
   $('#textbookForm').reset();
@@ -548,8 +540,6 @@ $('#reviewAgain').addEventListener('click', reviewAgain);
 $('#homeReviewAgain').addEventListener('click', reviewTodayAgain);
 $('#homeNav').addEventListener('click', () => { showView('homeView'); renderHome(); });
 $('#textbookNav').addEventListener('click', () => { showView('textbookView'); renderTextbook(); });
-$('#gradeFilter').addEventListener('change', renderTextbook);
-$('#semesterFilter').addEventListener('change', renderTextbook);
 $('#addTextbook').addEventListener('click', () => openTextbookDialog());
 $('#emptyTextbookAdd').addEventListener('click', () => openTextbookDialog());
 $('#closeTextbook').addEventListener('click', () => closeDialog($('#textbookDialog')));
