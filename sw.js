@@ -1,5 +1,5 @@
-const CACHE = 'zishiguang-v14';
-const FILES = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest'];
+const CACHE = 'zishiguang-v15';
+const FILES = ['./', './index.html', './styles.css?v=15', './app.js?v=15', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
@@ -18,7 +18,10 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  const mustBeFresh = event.request.mode === 'navigate';
+  const mustBeFresh = event.request.mode === 'navigate'
+    || url.pathname.endsWith('/index.html')
+    || url.pathname.endsWith('/styles.css')
+    || url.pathname.endsWith('/app.js');
   if (mustBeFresh) {
     event.respondWith(
       fetch(event.request)
