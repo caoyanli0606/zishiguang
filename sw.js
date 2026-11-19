@@ -1,5 +1,5 @@
-const CACHE = 'zishiguang-v15';
-const FILES = ['./', './index.html', './styles.css?v=15', './app.js?v=15', './manifest.webmanifest'];
+const CACHE = 'zishiguang-v16';
+const FILES = ['./', './index.html', './styles.css?v=15', './cloud-config.js?v=16', './app.js?v=16', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
@@ -45,3 +45,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
