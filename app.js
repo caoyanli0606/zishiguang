@@ -37,6 +37,10 @@ let textbookWords = JSON.parse(localStorage.getItem(TEXTBOOK_KEY) || '[]');
 let reviewContext = 'daily';
 let selectedLessonKeys = new Set();
 let editingLessonKey = null;
+let pairGroupIndex = 0;
+let selectedPairChar = null;
+let listenTarget = null;
+let listenScore = 0;
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -418,6 +422,138 @@ function renderCard() {
   $('#reviewedCountDisplay').textContent = reviewedCount;
   $('#remainingCount').textContent = queue.length - queueIndex;
   $('#revealPrompt').textContent = '先自己读一读，再点卡片看提示';
+  if (queueIndex === 0) prepareReviewModes();
+}
+
+function getPinyin(char) {
+  try {
+    return window.pinyinPro?.pinyin(char, { toneType: 'symbol' }) || '—';
+  } catch (error) {
+    return '—';
+  }
+}
+
+function uniqueQueueWords() {
+  return [...new Map(queue.map((word) => [word.char, word])).values()];
+}
+
+function shuffled(items) {
+  const result = items.slice();
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+  }
+  return result;
+}
+
+function switchReviewMode(mode) {
+  document.querySelectorAll('[data-review-mode]').forEach((button) => button.classList.toggle('active', button.dataset.reviewMode === mode));
+  document.querySelectorAll('.review-mode-panel').forEach((panel) => panel.classList.remove('active'));
+  $(`#${mode}ModePanel`).classList.add('active');
+  if (mode === 'overview') renderReviewOverview();
+  if (mode === 'pair') renderPairGroup();
+  if (mode === 'listen') startListenRound();
+}
+
+function prepareReviewModes() {
+  pairGroupIndex = 0;
+  selectedPairChar = null;
+  listenTarget = null;
+  listenScore = 0;
+  $('#listenScore').textContent = '答对 0 个';
+  switchReviewMode('card');
+  renderReviewOverview();
+}
+
+function renderReviewOverview() {
+  const entries = uniqueQueueWords();
+  $('#overviewCount').textContent = `${entries.length} 个字`;
+  $('#reviewOverviewGrid').innerHTML = entries.map((word) => `<button type="button" class="overview-word" data-overview-char="${word.char}"><span>${getPinyin(word.char)}</span><b>${word.char}</b><small>${levelText(word.level)}</small></button>`).join('');
+}
+
+function renderPairGroup() {
+  const entries = uniqueQueueWords();
+  const totalGroups = Math.max(1, Math.ceil(entries.length / 4));
+  if (pairGroupIndex >= totalGroups) pairGroupIndex = 0;
+  const group = entries.slice(pairGroupIndex * 4, pairGroupIndex * 4 + 4);
+  selectedPairChar = null;
+  $('#pairProgress').textContent = `第 ${pairGroupIndex + 1} / ${totalGroups} 组`;
+  $('#nextPairGroup').hidden = true;
+  $('#pairChars').innerHTML = shuffled(group).map((word, index) => `<button type="button" class="pair-choice" data-kind="char" data-pair-char="${word.char}" data-pair-id="c-${pairGroupIndex}-${index}">${word.char}</button>`).join('');
+  $('#pairPinyins').innerHTML = shuffled(group).map((word, index) => `<button type="button" class="pair-choice" data-kind="pinyin" data-pair-pinyin="${getPinyin(word.char)}" data-pair-id="p-${pairGroupIndex}-${index}">${getPinyin(word.char)}</button>`).join('');
+}
+
+function handlePairChoice(event) {
+  const charButton = event.target.closest('[data-pair-char]');
+  const pinyinButton = event.target.closest('[data-pair-pinyin]');
+  if (charButton && !charButton.classList.contains('matched')) {
+    document.querySelectorAll('[data-pair-char].selected').forEach((button) => button.classList.remove('selected'));
+    selectedPairChar = charButton;
+    charButton.classList.add('selected');
+    return;
+  }
+  if (!pinyinButton || !selectedPairChar || pinyinButton.classList.contains('matched')) return;
+  const expected = getPinyin(selectedPairChar.dataset.pairChar);
+  if (pinyinButton.dataset.pairPinyin === expected) {
+    selectedPairChar.classList.remove('selected');
+    selectedPairChar.classList.add('matched');
+    pinyinButton.classList.add('matched');
+    speakGameText(selectedPairChar.dataset.pairChar);
+    selectedPairChar = null;
+    if ([...document.querySelectorAll('[data-pair-char]')].every((button) => button.classList.contains('matched'))) $('#nextPairGroup').hidden = false;
+  } else {
+    pinyinButton.classList.add('wrong');
+    setTimeout(() => pinyinButton.classList.remove('wrong'), 420);
+  }
+}
+
+function nextPairGroup() {
+  pairGroupIndex += 1;
+  renderPairGroup();
+}
+
+function startListenRound() {
+  const entries = shuffled(uniqueQueueWords());
+  const choices = entries.slice(0, Math.min(4, entries.length));
+  if (!choices.length) return;
+  listenTarget = choices[Math.floor(Math.random() * choices.length)];
+  $('#listenChoices').innerHTML = shuffled(choices).map((word) => `<button type="button" class="listen-choice" data-listen-char="${word.char}">${word.char}</button>`).join('');
+  $('#listenFeedback').textContent = '仔细听，再选择对应的汉字';
+  setTimeout(playListenTarget, 180);
+}
+
+function playListenTarget() {
+  if (listenTarget) speakGameText(listenTarget.char);
+}
+
+function handleListenChoice(event) {
+  const button = event.target.closest('[data-listen-char]');
+  if (!button || !listenTarget) return;
+  if (button.dataset.listenChar === listenTarget.char) {
+    button.classList.add('correct');
+    $('#listenFeedback').textContent = `答对了！这是「${listenTarget.char}」`;
+    listenScore += 1;
+    $('#listenScore').textContent = `答对 ${listenScore} 个`;
+    speakFeedback('圈圈，你真是太棒了');
+    listenTarget = null;
+    setTimeout(startListenRound, 900);
+  } else {
+    button.classList.add('wrong');
+    $('#listenFeedback').textContent = '再听一次，慢慢找';
+    setTimeout(() => button.classList.remove('wrong'), 450);
+    playListenTarget();
+  }
+}
+
+function speakGameText(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'zh-CN';
+  utterance.rate = 0.72;
+  utterance.pitch = 1;
+  applySelectedVoice(utterance);
+  window.speechSynthesis.speak(utterance);
 }
 
 function rateWord(level) {
@@ -604,6 +740,15 @@ $('#openSettings').addEventListener('click', () => {
 });
 $('#closeSettings').addEventListener('click', () => closeDialog($('#settingsDialog')));
 $('#previewVoice').addEventListener('click', previewSelectedVoice);
+document.querySelectorAll('[data-review-mode]').forEach((button) => button.addEventListener('click', () => switchReviewMode(button.dataset.reviewMode)));
+$('#reviewOverviewGrid').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-overview-char]');
+  if (button) speakGameText(button.dataset.overviewChar);
+});
+$('#pairModePanel').addEventListener('click', handlePairChoice);
+$('#nextPairGroup').addEventListener('click', nextPairGroup);
+$('#playListenWord').addEventListener('click', playListenTarget);
+$('#listenChoices').addEventListener('click', handleListenChoice);
 $('#emptyAdd').addEventListener('click', openAddDialog);
 $('#addedTab').addEventListener('click', () => switchLibraryMode('added'));
 $('#reviewedTab').addEventListener('click', () => switchLibraryMode('reviewed'));
