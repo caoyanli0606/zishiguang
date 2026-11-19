@@ -25,6 +25,7 @@ h1 { margin-bottom: 0; font-family: "STKaiti", "KaiTi", serif; font-size: 30px; 
 h1 span { color: var(--red); font-size: 17px; }
 .icon-button, .close-button { border: 0; background: #fff; border-radius: 50%; width: 44px; height: 44px; font-size: 28px; box-shadow: 0 6px 18px rgba(65,48,29,.1); cursor: pointer; }
 .top-actions { display: flex; align-items: center; gap: 9px; }
+.settings-button { font-size: 20px; color: #5e574d; }
 
 .hero { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; padding: 22px; margin-bottom: 18px; border-radius: 25px; color: #fff9ef; background: var(--red); box-shadow: 0 16px 35px rgba(180,61,44,.22); }
 .hero::after { content: "习"; position: absolute; right: 104px; top: -40px; color: rgba(255,255,255,.08); font: 130px "STKaiti", serif; transform: rotate(-8deg); }
@@ -62,29 +63,29 @@ h1 span { color: var(--red); font-size: 17px; }
 .view { display: none; }.view.active { display: block; }
 .review-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
 .back-button { border: 0; background: none; padding: 6px 0; }
-.progress-track { height: 5px; overflow: hidden; margin-bottom: 30px; border-radius: 9px; background: #e4ddd1; }
+.progress-pill { padding: 5px 10px; border-radius: 99px; background: rgba(215,82,63,.09); color: var(--red-dark); font-weight: 700; }.progress-track { height: 7px; overflow: hidden; margin-bottom: 16px; border-radius: 9px; background: #e4ddd1; }
 .progress-track div { height: 100%; width: 0; border-radius: inherit; background: var(--red); transition: width .35s ease; }
-.voice-picker { display: flex; align-items: center; gap: 10px; margin: -14px 0 14px; color: var(--muted); font-size: 12px; font-weight: 700; }.voice-picker span { flex: 0 0 auto; }.voice-picker select { min-width: 0; flex: 1; padding: 8px 32px 8px 11px; border-radius: 12px; background-color: rgba(255,255,255,.65); font-size: 12px; }.voice-picker select:disabled { opacity: .6; }
+.review-session-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; padding: 12px 14px; border: 1px solid rgba(215,82,63,.1); border-radius: 17px; background: linear-gradient(135deg, rgba(255,255,255,.75), rgba(240,195,91,.1)); }.review-session-summary > div:first-child { display: flex; align-items: center; gap: 9px; }.review-session-summary > div:first-child > span { font-size: 23px; }.review-session-summary p { margin: 0; font-size: 13px; font-weight: 800; }.review-session-summary p small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 400; }.session-numbers { display: grid; grid-template-columns: auto auto 1px auto auto; align-items: center; gap: 4px; }.session-numbers b { color: var(--red-dark); font-size: 16px; }.session-numbers small { color: var(--muted); font-size: 9px; }.session-numbers i { width: 1px; height: 25px; margin: 0 5px; background: var(--line); }
 .review-stage { perspective: 900px; }
-.word-card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 360px; overflow: hidden; border: 1px solid rgba(36,33,29,.08); border-radius: 32px; background: #fffdf8; box-shadow: var(--shadow); cursor: pointer; user-select: none; transition: transform .22s ease, opacity .22s ease; }
+.word-card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 370px; overflow: hidden; border: 1px solid rgba(215,82,63,.12); border-radius: 34px; background: linear-gradient(155deg, #fffefb 0%, #fff9ef 58%, #f8ede0 100%); box-shadow: 0 22px 55px rgba(104,70,36,.14); cursor: pointer; user-select: none; transition: transform .22s ease, opacity .22s ease, box-shadow .25s ease; }
 .word-card::before { content: ""; position: absolute; inset: 20px; border: 1px solid rgba(215,82,63,.12); border-radius: 22px; }
 .word-card::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; background: rgba(215,82,63,.045); }
-.card-hint { position: absolute; top: 36px; z-index: 1; color: #aaa095; font-size: 11px; }
+.card-seal { position: absolute; top: 22px; right: 23px; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid rgba(215,82,63,.25); border-radius: 10px; color: var(--red); font: 20px "STKaiti", serif; transform: rotate(5deg); }.card-hint { position: absolute; top: 36px; z-index: 1; color: #9f9588; font-size: 11px; }
 .big-word { z-index: 1; font: 700 142px/1 "STKaiti", "KaiTi", serif; }
 .speak-button { z-index: 2; display: flex; align-items: center; gap: 6px; margin-top: 15px; padding: 8px 13px; border: 1px solid rgba(215,82,63,.18); border-radius: 20px; background: rgba(215,82,63,.07); color: var(--red-dark); cursor: pointer; }
 .speak-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .speak-button span { font-size: 11px; font-weight: 700; }.speak-button.speaking svg { animation: speakerPulse .55s ease infinite alternate; }
 @keyframes speakerPulse { to { transform: scale(1.22); opacity: .55; } }
 .memory-cue { z-index: 1; min-height: 25px; margin-top: 20px; color: var(--red-dark); font-size: 15px; opacity: 0; transform: translateY(5px); transition: .2s; }
-.word-card.revealed .memory-cue { opacity: 1; transform: none; }
+.word-card.revealed { box-shadow: 0 25px 65px rgba(79,117,93,.18); }.word-card.revealed .memory-cue { opacity: 1; transform: none; }
 .word-card.revealed .card-hint { opacity: 0; }
 .card-date { position: absolute; bottom: 35px; z-index: 1; color: #aaa095; font-size: 11px; }
 .word-card.fly-left { transform: translateX(-130%) rotate(-10deg); opacity: 0; }.word-card.fly-right { transform: translateX(130%) rotate(10deg); opacity: 0; }
 .word-card.enter { animation: cardEnter .3s ease; }
 @keyframes cardEnter { from { transform: translateY(18px) scale(.97); opacity: 0; } }
-.rating-panel { margin-top: 27px; text-align: center; }.rating-panel > p { color: var(--muted); font-size: 12px; }
+.rating-panel { margin-top: 20px; text-align: center; }.rating-panel > p { margin-bottom: 11px; color: var(--ink); font-size: 13px; }.rating-panel > p b { display: block; }.rating-panel > p span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
 .rating-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
-.rating-buttons button { display: flex; flex-direction: column; align-items: center; padding: 12px 4px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.6); cursor: pointer; }
+.rating-buttons button { display: flex; flex-direction: column; align-items: center; min-height: 84px; padding: 12px 4px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.7); box-shadow: 0 5px 15px rgba(65,48,29,.05); cursor: pointer; transition: transform .15s, box-shadow .15s; }.rating-buttons button:active { transform: scale(.96); }.rating-again { border-color: rgba(215,82,63,.22)!important; }.rating-familiar { border-color: rgba(240,195,91,.4)!important; }.rating-known { border-color: rgba(79,117,93,.3)!important; background: rgba(79,117,93,.08)!important; }
 .rating-buttons span { font-size: 22px; }.rating-buttons b { margin: 4px 0 2px; font-size: 12px; }.rating-buttons small { color: var(--muted); font-size: 9px; }
 .complete-view { padding-top: 18vh; text-align: center; }.complete-view h2 { font: 700 34px/1.4 "STKaiti", serif; }.complete-view > p:not(.eyebrow) { color: var(--muted); font-size: 14px; }
 .celebration { font-size: 60px; margin-bottom: 16px; animation: bounce .6s ease; }@keyframes bounce{50%{transform:scale(1.18) rotate(6deg)}}
@@ -106,6 +107,7 @@ dialog form { padding: 25px; }.dialog-head { display: flex; justify-content: spa
 label { display: block; margin: 16px 2px 7px; font-size: 13px; font-weight: 700; }label span { color: var(--muted); font-weight: 400; }
 input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; border-radius: 13px; outline: 0; background: white; font-size: 16px; }textarea { resize: none; font: 28px "STKaiti", serif; }input:focus, textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(215,82,63,.1); }
 .field-help { margin: 5px 2px 0; color: var(--muted); font-size: 10px; }.dialog-head + label { margin-top: 0; }dialog .primary-button { margin-top: 22px; }
+.settings-help { margin: 9px 2px 0; color: var(--muted); font-size: 11px; line-height: 1.6; }.voice-preview-button { width: 100%; min-height: 48px; margin-top: 18px; border: 1px solid rgba(79,117,93,.24); border-radius: 14px; background: rgba(79,117,93,.08); color: #41684f; font-weight: 700; cursor: pointer; }
 .toast { position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom)); z-index: 10; transform: translate(-50%, 20px); padding: 10px 17px; border-radius: 30px; background: var(--ink); color: white; font-size: 12px; opacity: 0; pointer-events: none; transition: .25s; }.toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (max-width: 360px) { .app-shell { padding-left: 15px; padding-right: 15px; }.word-card { min-height: 325px; }.big-word { font-size: 125px; }.rating-buttons { gap: 6px; } }
 @media (min-width: 650px) { .app-shell { background: rgba(246,241,232,.95); box-shadow: 0 0 60px rgba(65,48,29,.1); } }
@@ -140,9 +142,9 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .textbook-summary { padding-top: 9px; }
   .textbook-review-button { min-height: 46px; }
   .review-view.active { width: min(100%, 880px); display: grid; grid-template-columns: minmax(0, 1fr) 260px; grid-template-rows: auto auto 1fr; column-gap: 24px; }
-  .review-top, .progress-track, .voice-picker { grid-column: 1 / -1; }
-  .review-stage { grid-column: 1; grid-row: 3; }
-  .rating-panel { grid-column: 2; grid-row: 3; align-self: center; margin-top: 0; }
+  .review-top, .progress-track, .review-session-summary { grid-column: 1 / -1; }
+  .review-stage { grid-column: 1; grid-row: 4; }
+  .rating-panel { grid-column: 2; grid-row: 4; align-self: center; margin-top: 0; }
   .word-card { min-height: 300px; }
 }
 
