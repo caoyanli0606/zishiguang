@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=20" />
+  <link rel="stylesheet" href="styles.css?v=21" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -104,6 +104,7 @@
     </section>
 
     <section id="textbookView" class="view textbook-view active">
+      <div class="textbook-overview">
       <div class="textbook-banner">
         <div><p>课本识字</p><strong id="textbookTotal">0</strong><span> 个字</span></div>
         <div class="book-mark">课</div>
@@ -122,6 +123,7 @@
         <button id="toggleAllLessons" type="button">全选</button>
       </div>
       <button class="shuffle-review-button" id="shuffleLessonReview" type="button" hidden>乱序复习已选课时</button>
+      </div>
       <div id="textbookWordList" class="textbook-groups"></div>
       <div id="emptyTextbook" class="empty-state">
         <div class="empty-mark">课</div>
@@ -177,8 +179,8 @@
   </dialog>
 
   <div id="toast" class="toast" role="status"></div>
-  <script src="cloud-config.js?v=20"></script>
-  <script src="app.js?v=20"></script>
+  <script src="cloud-config.js?v=21"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>
 
