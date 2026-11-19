@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=27" />
+  <link rel="stylesheet" href="styles.css?v=28" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -94,6 +94,7 @@
             <span>听读音</span>
           </button>
           <div class="memory-cue" id="memoryCue"></div>
+          <button class="edit-current-words" id="editCurrentWords" type="button">＋ 补充组词</button>
           <span class="card-date" id="reviewDate"></span>
         </article>
       </div>
@@ -221,12 +222,27 @@
     </form>
   </dialog>
 
+  <dialog id="wordGroupDialog">
+    <form id="wordGroupForm" method="dialog">
+      <div class="dialog-head">
+        <div><p class="eyebrow">我的组词</p><h2><span id="wordGroupChar">字</span> · 补充组词</h2></div>
+        <button type="button" class="close-button" id="closeWordGroup">×</button>
+      </div>
+      <input id="wordGroupCharInput" type="hidden" />
+      <label for="wordGroupInput">补充词语 <span>（最多3个）</span></label>
+      <input id="wordGroupInput" type="text" maxlength="30" placeholder="例如：春天 春风 春雨" />
+      <p class="field-help">可用空格、逗号或顿号分隔；留空保存即可删除手动词语。</p>
+      <p class="word-group-system" id="wordGroupSystem"></p>
+      <button class="primary-button" type="submit">保存组词</button>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=27"></script>
-  <script src="app.js?v=27"></script>
+  <script src="cloud-config.js?v=28"></script>
+  <script src="app.js?v=28"></script>
 </body>
 </html>
 
