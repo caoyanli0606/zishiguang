@@ -85,6 +85,8 @@ async function loadRemoteTextbookCatalog() {
           semester,
           bookUnit: lesson.unit_name || '课本课时',
           unit: lesson.lesson_name,
+          lessonOrder: Number(lesson.lesson_order),
+          charOrder: charIndex,
           level: previous?.level || 0,
           reviewCount: previous?.reviewCount || 0,
           createdAt: previous?.createdAt || today(),
@@ -191,7 +193,9 @@ function lessonKey(word) {
 function sortTextbookWords(entries) {
   return entries.slice().sort((a, b) => Number(a.grade) - Number(b.grade)
     || Number(a.semester) - Number(b.semester)
+    || Number(a.lessonOrder || 9999) - Number(b.lessonOrder || 9999)
     || (a.unit || '未分课时').localeCompare(b.unit || '未分课时', 'zh-CN', { numeric: true })
+    || Number(a.charOrder ?? 9999) - Number(b.charOrder ?? 9999)
     || a.char.localeCompare(b.char, 'zh-CN'));
 }
 
