@@ -64,6 +64,7 @@ h1 span { color: var(--red); font-size: 17px; }
 .back-button { border: 0; background: none; padding: 6px 0; }
 .progress-track { height: 5px; overflow: hidden; margin-bottom: 30px; border-radius: 9px; background: #e4ddd1; }
 .progress-track div { height: 100%; width: 0; border-radius: inherit; background: var(--red); transition: width .35s ease; }
+.voice-picker { display: flex; align-items: center; gap: 10px; margin: -14px 0 14px; color: var(--muted); font-size: 12px; font-weight: 700; }.voice-picker span { flex: 0 0 auto; }.voice-picker select { min-width: 0; flex: 1; padding: 8px 32px 8px 11px; border-radius: 12px; background-color: rgba(255,255,255,.65); font-size: 12px; }.voice-picker select:disabled { opacity: .6; }
 .review-stage { perspective: 900px; }
 .word-card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 360px; overflow: hidden; border: 1px solid rgba(36,33,29,.08); border-radius: 32px; background: #fffdf8; box-shadow: var(--shadow); cursor: pointer; user-select: none; transition: transform .22s ease, opacity .22s ease; }
 .word-card::before { content: ""; position: absolute; inset: 20px; border: 1px solid rgba(215,82,63,.12); border-radius: 22px; }
@@ -138,5 +139,10 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .textbook-heading { margin-top: 15px; }
   .textbook-summary { padding-top: 9px; }
   .textbook-review-button { min-height: 46px; }
+  .review-view.active { width: min(100%, 880px); display: grid; grid-template-columns: minmax(0, 1fr) 260px; grid-template-rows: auto auto 1fr; column-gap: 24px; }
+  .review-top, .progress-track, .voice-picker { grid-column: 1 / -1; }
+  .review-stage { grid-column: 1; grid-row: 3; }
+  .rating-panel { grid-column: 2; grid-row: 3; align-self: center; margin-top: 0; }
+  .word-card { min-height: 300px; }
 }
 
