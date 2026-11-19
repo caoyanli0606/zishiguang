@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=25" />
+  <link rel="stylesheet" href="styles.css?v=26" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -76,6 +76,14 @@
         <div class="session-numbers"><b id="reviewedCountDisplay">0</b><small>已完成</small><i></i><b id="remainingCount">0</b><small>待复习</small></div>
       </div>
 
+      <div class="review-mode-tabs" role="tablist" aria-label="复习方式">
+        <button class="active" type="button" data-review-mode="card">单字卡</button>
+        <button type="button" data-review-mode="overview">字表</button>
+        <button type="button" data-review-mode="pair">拼音配对</button>
+        <button type="button" data-review-mode="listen">听音找字</button>
+      </div>
+
+      <div id="cardModePanel" class="review-mode-panel active">
       <div id="reviewStage" class="review-stage">
         <article id="wordCard" class="word-card" tabindex="0" role="button" aria-label="点击显示提示">
           <span class="card-seal">认</span>
@@ -98,6 +106,26 @@
           <button class="rating-known" data-rating="3"><span>⭐</span><b>认识</b><small>7 天后巩固</small></button>
         </div>
       </div>
+      </div>
+
+      <section id="overviewModePanel" class="review-mode-panel game-panel">
+        <div class="game-heading"><div><p class="eyebrow">全部字表</p><h2>先整体读一遍</h2></div><span id="overviewCount">0 个字</span></div>
+        <div id="reviewOverviewGrid" class="review-overview-grid"></div>
+      </section>
+
+      <section id="pairModePanel" class="review-mode-panel game-panel">
+        <div class="game-heading"><div><p class="eyebrow">四字一组</p><h2>把汉字和拼音配成一对</h2></div><span id="pairProgress">第 1 组</span></div>
+        <p class="game-tip">先点一个汉字，再点它的拼音</p>
+        <div class="pair-board"><div id="pairChars" class="pair-column"></div><div id="pairPinyins" class="pair-column"></div></div>
+        <button id="nextPairGroup" class="game-next-button" type="button" hidden>下一组</button>
+      </section>
+
+      <section id="listenModePanel" class="review-mode-panel game-panel">
+        <div class="game-heading"><div><p class="eyebrow">听音找字</p><h2>听一听，哪个字读这个音？</h2></div><span id="listenScore">答对 0 个</span></div>
+        <button id="playListenWord" class="listen-play-button" type="button">🔊 再听一次</button>
+        <div id="listenChoices" class="listen-choices"></div>
+        <p id="listenFeedback" class="listen-feedback">点击喇叭听读音，再选择汉字</p>
+      </section>
     </section>
 
     <section id="completeView" class="view complete-view">
@@ -194,8 +222,9 @@
   </dialog>
 
   <div id="toast" class="toast" role="status"></div>
-  <script src="cloud-config.js?v=25"></script>
-  <script src="app.js?v=25"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
+  <script src="cloud-config.js?v=26"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>
 
