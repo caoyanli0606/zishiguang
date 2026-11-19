@@ -550,7 +550,6 @@ $('#reviewAgain').addEventListener('click', reviewAgain);
 $('#homeReviewAgain').addEventListener('click', reviewTodayAgain);
 $('#homeNav').addEventListener('click', () => { showView('homeView'); renderHome(); });
 $('#textbookNav').addEventListener('click', () => { showView('textbookView'); renderTextbook(); });
-$('#addTextbook').addEventListener('click', () => openTextbookDialog());
 $('#emptyTextbookAdd').addEventListener('click', () => openTextbookDialog());
 $('#closeTextbook').addEventListener('click', () => closeDialog($('#textbookDialog')));
 $('#textbookForm').addEventListener('submit', addTextbookWords);
