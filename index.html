@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=24" />
+  <link rel="stylesheet" href="styles.css?v=25" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -19,6 +19,7 @@
         <h1>字时光 <span>✦</span></h1>
       </div>
       <div class="top-actions">
+        <button class="icon-button settings-button" id="openSettings" aria-label="语音设置">⚙</button>
         <button class="icon-button" id="openAdd" aria-label="添加汉字">＋</button>
       </div>
     </header>
@@ -67,17 +68,18 @@
     <section id="reviewView" class="view review-view" aria-live="polite">
       <div class="review-top">
         <button class="back-button" id="exitReview">← 退出</button>
-        <span id="reviewProgress">1 / 1</span>
+        <span class="progress-pill" id="reviewProgress">1 / 1</span>
       </div>
       <div class="progress-track"><div id="progressBar"></div></div>
-      <label class="voice-picker" for="voiceSelect">
-        <span>系统音色</span>
-        <select id="voiceSelect" aria-label="选择朗读音色"><option value="">正在读取音色…</option></select>
-      </label>
+      <div class="review-session-summary">
+        <div><span>✨</span><p>本轮挑战<small>先回忆，再翻卡确认</small></p></div>
+        <div class="session-numbers"><b id="reviewedCountDisplay">0</b><small>已完成</small><i></i><b id="remainingCount">0</b><small>待复习</small></div>
+      </div>
 
       <div id="reviewStage" class="review-stage">
         <article id="wordCard" class="word-card" tabindex="0" role="button" aria-label="点击显示提示">
-          <span class="card-hint">点一下，看看提示</span>
+          <span class="card-seal">认</span>
+          <span class="card-hint" id="revealPrompt">先自己读一读，再点卡片看提示</span>
           <div class="big-word" id="reviewWord">字</div>
           <button class="speak-button" id="speakWord" type="button" aria-label="朗读这个字">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l4.5 4V5.5l-4.5 4H4Zm11.3-.9a5 5 0 0 1 0 6.8M17.8 6a8.5 8.5 0 0 1 0 12" /></svg>
@@ -89,11 +91,11 @@
       </div>
 
       <div class="rating-panel">
-        <p>这个字你记得怎么样？</p>
+        <p><b>记得怎么样？</b><span>按真实感觉选择，下次复习会更准</span></p>
         <div class="rating-buttons">
-          <button data-rating="1"><span>🌱</span><b>再练练</b><small>今天再来</small></button>
-          <button data-rating="2"><span>🙂</span><b>有点熟</b><small>2 天后</small></button>
-          <button data-rating="3"><span>⭐</span><b>认识</b><small>7 天后</small></button>
+          <button class="rating-again" data-rating="1"><span>🌱</span><b>再练练</b><small>今天再见</small></button>
+          <button class="rating-familiar" data-rating="2"><span>🙂</span><b>有点熟</b><small>2 天后再见</small></button>
+          <button class="rating-known" data-rating="3"><span>⭐</span><b>认识</b><small>7 天后巩固</small></button>
         </div>
       </div>
     </section>
@@ -178,9 +180,22 @@
     </form>
   </dialog>
 
+  <dialog id="settingsDialog">
+    <form method="dialog">
+      <div class="dialog-head">
+        <div><p class="eyebrow">朗读设置</p><h2>选择系统音色</h2></div>
+        <button type="button" class="close-button" id="closeSettings">×</button>
+      </div>
+      <label for="voiceSelect">中文音色</label>
+      <select id="voiceSelect" aria-label="选择朗读音色"><option value="">正在读取音色…</option></select>
+      <p class="settings-help">可选音色由当前手机、平板或电脑提供，选择会保存在这台设备。</p>
+      <button class="voice-preview-button" id="previewVoice" type="button">🔊 试听当前音色</button>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status"></div>
-  <script src="cloud-config.js?v=24"></script>
-  <script src="app.js?v=24"></script>
+  <script src="cloud-config.js?v=25"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>
 
