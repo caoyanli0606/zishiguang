@@ -19,7 +19,6 @@
         <h1>字时光 <span>✦</span></h1>
       </div>
       <div class="top-actions">
-        <button class="cloud-button" id="openCloud" aria-label="家庭云同步"><span id="cloudDot"></span><b id="cloudLabel">本地</b></button>
         <button class="icon-button" id="openAdd" aria-label="添加汉字">＋</button>
       </div>
     </header>
@@ -35,7 +34,7 @@
       </div>
     </section>
 
-    <section id="homeView" class="view active">
+    <section id="homeView" class="view">
       <button class="primary-button" id="startReview">
         <span>开始今日复习</span><span class="arrow">→</span>
       </button>
@@ -104,7 +103,7 @@
       <button class="primary-button" id="backHome">回到首页</button>
     </section>
 
-    <section id="textbookView" class="view textbook-view">
+    <section id="textbookView" class="view textbook-view active">
       <div class="textbook-banner">
         <div><p>课本识字</p><strong id="textbookTotal">0</strong><span> 个字</span></div>
         <div class="book-mark">课</div>
@@ -129,7 +128,12 @@
         <span>当前共 <b id="filteredTextbookCount">0</b> 个字</span>
         <span>已认识 <b id="knownTextbookCount">0</b> 个</span>
       </div>
-      <button class="primary-button textbook-review-button" id="startTextbookReview" type="button">复习当前识字表</button>
+      <button class="primary-button textbook-review-button" id="startTextbookReview" type="button">按顺序复习当前识字表</button>
+      <div class="lesson-review-tools" id="lessonReviewTools" hidden>
+        <div><b>组合课时</b><span>已选 <strong id="selectedLessonCount">0</strong> 个课时</span></div>
+        <button id="toggleAllLessons" type="button">全选</button>
+      </div>
+      <button class="shuffle-review-button" id="shuffleLessonReview" type="button" hidden>乱序复习已选课时</button>
       <div id="textbookWordList" class="textbook-groups"></div>
       <div id="emptyTextbook" class="empty-state">
         <div class="empty-mark">课</div>
@@ -140,8 +144,8 @@
     </section>
 
     <nav class="main-nav" id="mainNav" aria-label="主要功能">
-      <button class="active" id="homeNav" type="button"><span>◉</span><b>今日</b></button>
-      <button id="textbookNav" type="button"><span>田</span><b>课本识字</b></button>
+      <button id="homeNav" type="button"><span>◉</span><b>今日</b></button>
+      <button class="active" id="textbookNav" type="button"><span>田</span><b>课本识字</b></button>
     </nav>
   </main>
 
@@ -162,27 +166,10 @@
     </form>
   </dialog>
 
-  <dialog id="cloudDialog">
-    <form id="cloudForm" method="dialog">
-      <div class="dialog-head">
-        <div><p class="eyebrow">多设备共享</p><h2>连接家庭字库</h2></div>
-        <button type="button" class="close-button" id="closeCloud">×</button>
-      </div>
-      <div class="cloud-illustration">☁️</div>
-      <p class="cloud-copy">家人在不同手机上输入相同口令，就能共享字库和复习进度。</p>
-      <label for="familyCode">家庭口令</label>
-      <input id="familyCode" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 位，建议字母加数字" required />
-      <p class="field-help">口令不会上传，请务必由家人自行记住。</p>
-      <button class="primary-button" id="connectCloud" type="submit">连接并同步</button>
-      <button class="disconnect-button" id="disconnectCloud" type="button">断开这个家庭</button>
-      <p class="config-note" id="cloudConfigNote"></p>
-    </form>
-  </dialog>
-
   <dialog id="textbookDialog">
     <form id="textbookForm" method="dialog">
       <div class="dialog-head">
-        <div><p class="eyebrow">小学识字表</p><h2>录入课本生字</h2></div>
+        <div><p class="eyebrow">小学识字表</p><h2 id="textbookDialogTitle">录入课本生字</h2></div>
         <button type="button" class="close-button" id="closeTextbook">×</button>
       </div>
       <div class="textbook-form-row">
@@ -192,17 +179,16 @@
         </select></div>
         <div><label for="textbookSemester">册别</label><select id="textbookSemester" required><option value="1">上册</option><option value="2">下册</option></select></div>
       </div>
-      <label for="textbookUnit">课次或单元 <span>（选填）</span></label>
-      <input id="textbookUnit" type="text" maxlength="20" placeholder="例如：第一单元、识字 1" />
+      <label for="textbookUnit">课时名称</label>
+      <input id="textbookUnit" type="text" maxlength="20" placeholder="例如：第 1 课、识字 1" required />
       <label for="textbookInput">课本中的生字</label>
       <textarea id="textbookInput" rows="4" placeholder="可以连续粘贴：天地人你我他" required></textarea>
       <p class="field-help">自动提取汉字并去重；相同年级和册别中不会重复添加。</p>
-      <button class="primary-button" type="submit">保存识字表</button>
+      <button class="primary-button" id="textbookSubmit" type="submit">保存识字表</button>
     </form>
   </dialog>
 
   <div id="toast" class="toast" role="status"></div>
-  <script src="cloud-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
