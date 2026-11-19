@@ -69,31 +69,30 @@ async function loadRemoteTextbookCatalog() {
     const lessons = rows[0]?.payload?.lessons;
     if (!Array.isArray(lessons)) throw new Error('catalog payload missing');
 
-    const existingByLessonChar = new Map(textbookWords.map((word) => [
-      `${word.grade}|${word.semester}|${word.unit || ''}|${word.char}`,
-      word
-    ]));
+    const existingCatalogById = new Map(textbookWords.filter((word) => word.catalog).map((word) => [word.id, word]));
+    const manualWords = textbookWords.filter((word) => !word.catalog);
+    const remoteWords = [];
     lessons.forEach((lesson) => {
       const semester = lesson.semester === '上册' ? 1 : 2;
       [...lesson.characters].forEach((char, charIndex) => {
-        const localKey = `${lesson.grade}|${semester}|${lesson.lesson_name}|${char}`;
-        if (existingByLessonChar.has(localKey)) return;
-        const word = {
-          id: `catalog-${lesson.grade}-${semester}-${lesson.lesson_order}-${charIndex}-${char}`,
+        const id = `catalog-${lesson.grade}-${semester}-${lesson.lesson_order}-${charIndex}-${char}`;
+        const previous = existingCatalogById.get(id);
+        remoteWords.push({
+          ...previous,
+          id,
           char,
           grade: Number(lesson.grade),
           semester,
           unit: lesson.lesson_name,
-          level: 0,
-          reviewCount: 0,
-          createdAt: today(),
+          level: previous?.level || 0,
+          reviewCount: previous?.reviewCount || 0,
+          createdAt: previous?.createdAt || today(),
           source: 'textbook',
           catalog: true
-        };
-        textbookWords.push(word);
-        existingByLessonChar.set(localKey, word);
+        });
       });
     });
+    textbookWords = [...manualWords, ...remoteWords];
     saveTextbookWords();
     renderTextbook();
   } catch (error) {
