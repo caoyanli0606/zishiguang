@@ -4,6 +4,7 @@ const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
 const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
 const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
 const VOICE_KEY = 'zishiguang-voice-v1';
+const MANUAL_WORDS_KEY = 'zishiguang-manual-words-v1';
 const WORD_FALLBACKS = {
   哥:['哥哥','大哥'],鸦:['乌鸦','鸦片'],蛙:['青蛙','牛蛙'],狗:['小狗','狼狗'],伞:['雨伞','打伞'],兔:['白兔','兔子'],爪:['爪子','鸡爪'],霜:['冰霜','霜花'],弓:['弓箭','拉弓'],吴:['吴国'],页:['页面','书页'],粽:['粽子','粽叶'],煮:['煮饭','煮熟'],蚂:['蚂蚁'],蚁:['蚂蚁','白蚁'],杨:['杨树','白杨'],袍:['长袍','棉袍'],呀:['好呀'],吗:['好吗'],吧:['走吧'],汤:['米汤','菜汤'],蚊:['蚊子','蚊虫'],啊:['好啊'],猴:['猴子','金丝猴'],掰:['掰开'],扛:['扛起','扛枪'],棵:['一棵','棵数'],咕:['咕咚','咕噜'],咚:['咕咚','叮咚'],啦:['来啦'],鹿:['小鹿','梅花鹿'],龟:['乌龟','海龟'],肚:['肚子','肚皮'],帆:['帆船','风帆'],艘:['一艘'],溪:['小溪','溪水'],榕:['榕树'],桐:['梧桐','油桐'],枫:['枫树','枫叶'],桦:['白桦','桦树'],杏:['杏花','杏子'],杉:['水杉','杉树'],蝴:['蝴蝶'],蝶:['蝴蝶','彩蝶'],壶:['水壶','茶壶'],鼻:['鼻子','鼻孔'],勺:['勺子','饭勺'],琴:['钢琴','琴声'],鹊:['喜鹊'],盯:['盯着','盯住'],朱:['朱红','朱砂'],扁:['扁担','扁平'],踩:['踩水','踩踏'],刘:['姓刘'],炒:['炒菜','炒饭'],哎:['哎呀'],哇:['好哇'],晒:['晒太阳','晾晒'],漱:['漱口'],沼:['沼泽'],闸:['水闸','闸门'],羔:['羊羔'],蝗:['蝗虫'],猬:['刺猬'],莓:['草莓'],呜:['呜咽','呜呜'],猩:['猩猩'],鸽:['鸽子','白鸽'],蚯:['蚯蚓'],蚓:['蚯蚓'],骆:['骆驼'],驼:['骆驼','驼峰'],狮:['狮子','海狮'],莺:['黄莺','夜莺'],咏:['歌咏','咏叹'],绦:['丝绦'],袄:['棉袄','夹袄'],鹃:['杜鹃'],籽:['种子','菜籽'],亭:['凉亭','亭子'],瓣:['花瓣','蒜瓣'],蔗:['甘蔗','蔗糖'],葱:['大葱','葱花'],巷:['小巷','街巷'],祭:['祭祖','祭扫'],艾:['艾草'],菊:['菊花'],菠:['菠菜','菠萝'],茄:['茄子','番茄'],炖:['炖肉','炖汤'],蘑:['蘑菇'],菇:['蘑菇','香菇'],饺:['饺子','水饺'],酱:['酱油','果酱'],茸:['毛茸茸','鹿茸'],屎:['眼屎','鸟屎'],婶:['婶婶','大婶'],陀:['陀螺'],螺:['田螺','海螺'],毽:['毽子','踢毽子'],叼:['叼走','叼着'],晌:['晌午','半晌'],棚:['大棚','车棚'],驮:['驮运','驮着'],哩:['好哩'],唉:['唉声叹气'],蹄:['马蹄','蹄子'],鹂:['黄鹂'],盏:['一盏','灯盏'],耷:['耷拉'],咦:['咦呀'],竿:['竹竿','鱼竿'],颈:['颈部','长颈鹿'],袜:['袜子','棉袜'],蜈:['蜈蚣'],蚣:['蜈蚣'],愣:['发愣','愣住'],帚:['扫帚'],桶:['水桶','木桶'],箕:['簸箕'],蔷:['蔷薇'],薇:['蔷薇'],哦:['哦呀'],
   行:['行走','步行','行动'],长:['长江','长城','长短'],只:['一只','船只'],乐:['快乐','欢乐','乐园'],得:['得到','获得'],地:['大地','土地','地方'],着:['看着','听着'],还:['还有','还是'],重:['重要','重量'],朝:['朝向','朝代'],发:['发现','出发'],好:['好人','美好'],少:['多少','很少'],数:['数学','数字'],空:['天空','空气'],更:['更加','更好'],没:['没有','没事'],几:['几个','几天'],觉:['觉得','感觉'],背:['背后','后背'],当:['当时','当天'],种:['种子','种类']
@@ -45,6 +46,7 @@ let pairGroupIndex = 0;
 let selectedPairChar = null;
 let listenTarget = null;
 let listenScore = 0;
+let manualStudyWords = JSON.parse(localStorage.getItem(MANUAL_WORDS_KEY) || '{}');
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -438,7 +440,7 @@ function getPinyin(char) {
   }
 }
 
-function getStudyWords(wordOrChar) {
+function getAutomaticStudyWords(wordOrChar) {
   const char = typeof wordOrChar === 'string' ? wordOrChar : wordOrChar.char;
   const fallback = WORD_FALLBACKS[char] || [];
   let candidates = [];
@@ -465,6 +467,46 @@ function getStudyWords(wordOrChar) {
     return fallbackA - fallbackB || a.length - b.length || a.localeCompare(b, 'zh-CN');
   });
   return ranked.slice(0, 3);
+}
+
+function getStudyWords(wordOrChar) {
+  const char = typeof wordOrChar === 'string' ? wordOrChar : wordOrChar.char;
+  const manual = Array.isArray(manualStudyWords[char]) ? manualStudyWords[char] : [];
+  return [...manual, ...getAutomaticStudyWords(char)].filter((term, index, all) => all.indexOf(term) === index).slice(0, 3);
+}
+
+function openWordGroupDialog(char) {
+  if (!char) return;
+  $('#wordGroupChar').textContent = char;
+  $('#wordGroupCharInput').value = char;
+  $('#wordGroupInput').value = (manualStudyWords[char] || []).join(' ');
+  const automatic = getAutomaticStudyWords(char);
+  $('#wordGroupSystem').textContent = automatic.length ? `系统推荐：${automatic.join(' · ')}` : '这个字暂时没有系统推荐词，可以手动补充。';
+  showDialog($('#wordGroupDialog'));
+  setTimeout(() => $('#wordGroupInput').focus(), 80);
+}
+
+function saveManualStudyWords(event) {
+  event.preventDefault();
+  const char = $('#wordGroupCharInput').value;
+  const raw = $('#wordGroupInput').value.trim();
+  const entries = [...new Set(raw.split(/[\s,，、;；]+/).map((term) => term.trim()).filter(Boolean))];
+  const invalid = entries.find((term) => !term.includes(char));
+  if (invalid) return showToast(`“${invalid}”中没有“${char}”字`);
+  if (entries.length > 3) return showToast('每个字最多补充3个词语');
+  if (entries.length) manualStudyWords[char] = entries;
+  else delete manualStudyWords[char];
+  localStorage.setItem(MANUAL_WORDS_KEY, JSON.stringify(manualStudyWords));
+  closeDialog($('#wordGroupDialog'));
+  if ($('#reviewView').classList.contains('active')) {
+    renderReviewOverview();
+    const current = queue[queueIndex];
+    if (current?.char === char) {
+      const studyWords = getStudyWords(current);
+      $('#memoryCue').innerHTML = `<strong>${escapeHtml(getPinyin(char))}</strong><span>${studyWords.map(escapeHtml).join(' · ') || '大声读一读'}</span>${current.note ? `<small>${escapeHtml(current.note)}</small>` : ''}`;
+    }
+  }
+  showToast(entries.length ? '组词已保存' : '手动组词已删除');
 }
 
 function uniqueQueueWords() {
@@ -502,7 +544,7 @@ function prepareReviewModes() {
 function renderReviewOverview() {
   const entries = uniqueQueueWords();
   $('#overviewCount').textContent = `${entries.length} 个字`;
-  $('#reviewOverviewGrid').innerHTML = entries.map((word) => `<button type="button" class="overview-word" data-overview-char="${word.char}"><span>${getPinyin(word.char)}</span><b>${word.char}</b><small>${getStudyWords(word).map(escapeHtml).join(' · ') || '读一读'}</small></button>`).join('');
+  $('#reviewOverviewGrid').innerHTML = entries.map((word) => `<article class="overview-word"><button type="button" class="overview-word-main" data-overview-char="${word.char}"><span>${getPinyin(word.char)}</span><b>${word.char}</b><small>${getStudyWords(word).map(escapeHtml).join(' · ') || '读一读'}</small></button><button type="button" class="overview-word-edit" data-edit-study-words="${word.char}" aria-label="补充${word.char}的组词">＋</button></article>`).join('');
 }
 
 function renderPairGroup() {
@@ -776,9 +818,17 @@ $('#closeSettings').addEventListener('click', () => closeDialog($('#settingsDial
 $('#previewVoice').addEventListener('click', previewSelectedVoice);
 document.querySelectorAll('[data-review-mode]').forEach((button) => button.addEventListener('click', () => switchReviewMode(button.dataset.reviewMode)));
 $('#reviewOverviewGrid').addEventListener('click', (event) => {
+  const editButton = event.target.closest('[data-edit-study-words]');
+  if (editButton) return openWordGroupDialog(editButton.dataset.editStudyWords);
   const button = event.target.closest('[data-overview-char]');
   if (button) speakGameText(button.dataset.overviewChar);
 });
+$('#editCurrentWords').addEventListener('click', (event) => {
+  event.stopPropagation();
+  openWordGroupDialog(queue[queueIndex]?.char);
+});
+$('#closeWordGroup').addEventListener('click', () => closeDialog($('#wordGroupDialog')));
+$('#wordGroupForm').addEventListener('submit', saveManualStudyWords);
 $('#pairModePanel').addEventListener('click', handlePairChoice);
 $('#nextPairGroup').addEventListener('click', nextPairGroup);
 $('#playListenWord').addEventListener('click', playListenTarget);
