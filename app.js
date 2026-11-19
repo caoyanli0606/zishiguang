@@ -2,6 +2,7 @@ const STORAGE_KEY = 'zishiguang-words-v1';
 const HISTORY_KEY = 'zishiguang-history-v1';
 const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
 const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
+const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
 
 const $ = (selector) => document.querySelector(selector);
 const today = () => new Date().toLocaleDateString('sv-SE');
@@ -52,6 +53,52 @@ function saveReviewLog() {
 
 function saveTextbookWords() {
   localStorage.setItem(TEXTBOOK_KEY, JSON.stringify(textbookWords));
+}
+
+async function loadRemoteTextbookCatalog() {
+  const config = window.CLOUD_CONFIG;
+  if (!config?.url || !config?.publishableKey) return;
+  try {
+    const endpoint = `${config.url}/rest/v1/family_data?family_id=eq.${TEXTBOOK_CATALOG_ID}&select=payload`;
+    const response = await fetch(endpoint, {
+      headers: { apikey: config.publishableKey, 'x-family-id': TEXTBOOK_CATALOG_ID },
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error(`catalog ${response.status}`);
+    const rows = await response.json();
+    const lessons = rows[0]?.payload?.lessons;
+    if (!Array.isArray(lessons)) throw new Error('catalog payload missing');
+
+    const existingByLessonChar = new Map(textbookWords.map((word) => [
+      `${word.grade}|${word.semester}|${word.unit || ''}|${word.char}`,
+      word
+    ]));
+    lessons.forEach((lesson) => {
+      const semester = lesson.semester === '上册' ? 1 : 2;
+      [...lesson.characters].forEach((char, charIndex) => {
+        const localKey = `${lesson.grade}|${semester}|${lesson.lesson_name}|${char}`;
+        if (existingByLessonChar.has(localKey)) return;
+        const word = {
+          id: `catalog-${lesson.grade}-${semester}-${lesson.lesson_order}-${charIndex}-${char}`,
+          char,
+          grade: Number(lesson.grade),
+          semester,
+          unit: lesson.lesson_name,
+          level: 0,
+          reviewCount: 0,
+          createdAt: today(),
+          source: 'textbook',
+          catalog: true
+        };
+        textbookWords.push(word);
+        existingByLessonChar.set(localKey, word);
+      });
+    });
+    saveTextbookWords();
+    renderTextbook();
+  } catch (error) {
+    console.warn('课本字表同步失败，将继续使用本机数据。', error);
+  }
 }
 
 function levelText(level) {
@@ -531,3 +578,5 @@ navigator.storage?.persist?.().catch(() => {});
 renderHome();
 renderTextbook();
 showView('textbookView');
+loadRemoteTextbookCatalog();
+
