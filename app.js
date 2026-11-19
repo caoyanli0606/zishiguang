@@ -539,6 +539,15 @@ function shuffleCurrentLesson() {
   showToast('本课生字已打乱');
 }
 
+function showNextCard() {
+  if (!queue.length) return;
+  window.speechSynthesis?.cancel();
+  const reachedEnd = queueIndex >= queue.length - 1;
+  queueIndex = reachedEnd ? 0 : queueIndex + 1;
+  renderCard();
+  if (reachedEnd) showToast('已经看完一轮，从第一个字继续');
+}
+
 function switchReviewMode(mode) {
   document.querySelectorAll('[data-review-mode]').forEach((button) => button.classList.toggle('active', button.dataset.reviewMode === mode));
   document.querySelectorAll('.review-mode-panel').forEach((panel) => panel.classList.remove('active'));
@@ -875,6 +884,7 @@ $('#addForm').addEventListener('submit', addWords);
 $('#startReview').addEventListener('click', startReview);
 $('#exitReview').addEventListener('click', returnFromReview);
 $('#shuffleCurrentLesson').addEventListener('click', shuffleCurrentLesson);
+$('#nextCard').addEventListener('click', showNextCard);
 $('#wordCard').addEventListener('click', () => {
   const card = $('#wordCard');
   card.classList.toggle('revealed');
