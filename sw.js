@@ -1,4 +1,4 @@
-const CACHE = 'zishiguang-v5';
+const CACHE = 'zishiguang-v10';
 const FILES = ['./', './index.html', './styles.css', './cloud-config.js', './app.js', './manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
