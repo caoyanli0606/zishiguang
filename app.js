@@ -3,6 +3,7 @@ const HISTORY_KEY = 'zishiguang-history-v1';
 const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
 const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
 const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
+const VOICE_KEY = 'zishiguang-voice-v1';
 
 const $ = (selector) => document.querySelector(selector);
 const today = () => new Date().toLocaleDateString('sv-SE');
@@ -479,8 +480,7 @@ function speakCurrentWord(event) {
   utterance.lang = 'zh-CN';
   utterance.rate = 0.72;
   utterance.pitch = 1;
-  const chineseVoice = window.speechSynthesis.getVoices().find((voice) => /^zh[-_]/i.test(voice.lang));
-  if (chineseVoice) utterance.voice = chineseVoice;
+  applySelectedVoice(utterance);
   const button = $('#speakWord');
   utterance.onstart = () => button.classList.add('speaking');
   utterance.onend = utterance.onerror = () => button.classList.remove('speaking');
@@ -493,9 +493,71 @@ function speakFeedback(message) {
   utterance.lang = 'zh-CN';
   utterance.rate = 0.82;
   utterance.pitch = 1.08;
-  const chineseVoice = window.speechSynthesis.getVoices().find((voice) => /^zh[-_]/i.test(voice.lang));
-  if (chineseVoice) utterance.voice = chineseVoice;
+  applySelectedVoice(utterance);
   window.speechSynthesis.speak(utterance);
+}
+
+function getChineseVoices() {
+  if (!('speechSynthesis' in window)) return [];
+  return window.speechSynthesis.getVoices().filter((voice) => /^zh(?:[-_]|$)/i.test(voice.lang));
+}
+
+function selectedSystemVoice() {
+  const saved = localStorage.getItem(VOICE_KEY);
+  const voices = getChineseVoices();
+  return voices.find((voice) => voice.voiceURI === saved || voice.name === saved) || voices[0] || null;
+}
+
+function applySelectedVoice(utterance) {
+  const voice = selectedSystemVoice();
+  if (voice) utterance.voice = voice;
+}
+
+function voiceRegion(lang) {
+  const code = String(lang || '').toLowerCase();
+  if (code.includes('tw')) return '台湾';
+  if (code.includes('hk')) return '香港';
+  return '普通话';
+}
+
+function refreshVoiceOptions() {
+  const select = $('#voiceSelect');
+  if (!select) return;
+  const voices = getChineseVoices();
+  const saved = localStorage.getItem(VOICE_KEY);
+  if (!voices.length) {
+    select.innerHTML = '<option value="">系统默认中文音色</option>';
+    select.disabled = true;
+    return;
+  }
+  select.disabled = false;
+  select.innerHTML = voices.map((voice, index) => `<option value="${escapeHtml(voice.voiceURI)}">${escapeHtml(voice.name)} · ${voiceRegion(voice.lang)}${voice.default ? '（默认）' : ''}</option>`).join('');
+  const match = voices.find((voice) => voice.voiceURI === saved || voice.name === saved);
+  select.value = (match || voices[0]).voiceURI;
+}
+
+function previewSelectedVoice() {
+  const select = $('#voiceSelect');
+  if (!select?.value || !('speechSynthesis' in window)) return;
+  localStorage.setItem(VOICE_KEY, select.value);
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance('你好，我来陪圈圈认字');
+  utterance.lang = 'zh-CN';
+  utterance.rate = 0.82;
+  utterance.pitch = 1.04;
+  applySelectedVoice(utterance);
+  window.speechSynthesis.speak(utterance);
+}
+
+function initVoiceSelector() {
+  if (!('speechSynthesis' in window)) {
+    $('#voiceSelect').innerHTML = '<option>当前浏览器不支持语音</option>';
+    $('#voiceSelect').disabled = true;
+    return;
+  }
+  refreshVoiceOptions();
+  window.speechSynthesis.addEventListener?.('voiceschanged', refreshVoiceOptions);
+  setTimeout(refreshVoiceOptions, 500);
 }
 
 function reviewAgain() {
@@ -544,6 +606,7 @@ $('#startReview').addEventListener('click', startReview);
 $('#exitReview').addEventListener('click', returnFromReview);
 $('#wordCard').addEventListener('click', () => $('#wordCard').classList.toggle('revealed'));
 $('#speakWord').addEventListener('click', speakCurrentWord);
+$('#voiceSelect').addEventListener('change', previewSelectedVoice);
 document.querySelectorAll('[data-rating]').forEach((button) => button.addEventListener('click', () => rateWord(Number(button.dataset.rating))));
 $('#backHome').addEventListener('click', returnFromReview);
 $('#reviewAgain').addEventListener('click', reviewAgain);
@@ -595,4 +658,5 @@ renderHome();
 renderTextbook();
 showView('textbookView');
 loadRemoteTextbookCatalog();
+initVoiceSelector();
 
