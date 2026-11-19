@@ -40,6 +40,7 @@ let libraryMode = 'added';
 let libraryFilters = { added: 'all', reviewed: today() };
 let textbookWords = JSON.parse(localStorage.getItem(TEXTBOOK_KEY) || '[]');
 let reviewContext = 'daily';
+let reviewScope = 'all';
 let selectedLessonKeys = new Set();
 let editingLessonKey = null;
 let pairGroupIndex = 0;
@@ -328,6 +329,7 @@ function startTextbookReview() {
   queue = sortTextbookWords(getFilteredTextbookWords()).map((word) => ({ ...word, source: 'textbook' }));
   if (!queue.length) return;
   reviewContext = 'textbook';
+  reviewScope = 'all';
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
@@ -338,6 +340,7 @@ function startLessonReview(key) {
   queue = sortTextbookWords(textbookWords.filter((word) => lessonKey(word) === key)).map((word) => ({ ...word, source: 'textbook' }));
   if (!queue.length) return showToast('这个课时还没有生字');
   reviewContext = 'textbook';
+  reviewScope = 'lesson';
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
@@ -353,6 +356,7 @@ function startShuffledLessonReview() {
   }
   queue = selectedWords;
   reviewContext = 'textbook';
+  reviewScope = 'combined';
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
@@ -408,6 +412,7 @@ function startReview() {
   queue = words.filter((word) => !word.nextReview || word.nextReview <= today()).map((word) => ({ ...word, source: 'daily' }));
   if (!queue.length) return;
   reviewContext = 'daily';
+  reviewScope = 'all';
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
@@ -428,6 +433,7 @@ function renderCard() {
   $('#progressBar').style.width = `${(queueIndex / queue.length) * 100}%`;
   $('#reviewedCountDisplay').textContent = reviewedCount;
   $('#remainingCount').textContent = queue.length - queueIndex;
+  $('#shuffleCurrentLesson').hidden = reviewScope !== 'lesson' || queue.length < 2 || reviewedCount > 0;
   $('#revealPrompt').textContent = '先自己读一读，再点卡片看提示';
   if (queueIndex === 0) prepareReviewModes();
 }
@@ -520,6 +526,15 @@ function shuffled(items) {
     [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
   }
   return result;
+}
+
+function shuffleCurrentLesson() {
+  if (reviewScope !== 'lesson' || queue.length < 2) return;
+  queue = shuffled(queue);
+  queueIndex = 0;
+  reviewedCount = 0;
+  renderCard();
+  showToast('本课生字已打乱');
 }
 
 function switchReviewMode(mode) {
@@ -792,6 +807,7 @@ function reviewTodayAgain() {
   queue = words.filter((word) => reviewedChars.has(word.char));
   if (!queue.length) return showToast('今天还没有可重复复习的字');
   reviewContext = 'daily';
+  reviewScope = 'all';
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
@@ -842,6 +858,7 @@ $('#closeAdd').addEventListener('click', () => closeDialog($('#addDialog')));
 $('#addForm').addEventListener('submit', addWords);
 $('#startReview').addEventListener('click', startReview);
 $('#exitReview').addEventListener('click', returnFromReview);
+$('#shuffleCurrentLesson').addEventListener('click', shuffleCurrentLesson);
 $('#wordCard').addEventListener('click', () => {
   const card = $('#wordCard');
   card.classList.toggle('revealed');
