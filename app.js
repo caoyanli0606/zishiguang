@@ -83,6 +83,7 @@ async function loadRemoteTextbookCatalog() {
           char,
           grade: Number(lesson.grade),
           semester,
+          bookUnit: lesson.unit_name || '课本课时',
           unit: lesson.lesson_name,
           level: previous?.level || 0,
           reviewCount: previous?.reviewCount || 0,
@@ -217,23 +218,32 @@ function renderTextbook() {
   const groups = new Map();
   filtered.forEach((word) => {
     const bookKey = `${word.grade}-${word.semester}`;
-    if (!groups.has(bookKey)) groups.set(bookKey, { grade: word.grade, semester: word.semester, lessons: new Map() });
+    if (!groups.has(bookKey)) groups.set(bookKey, { grade: word.grade, semester: word.semester, units: new Map() });
+    const unitName = word.bookUnit || '自定义课时';
+    const units = groups.get(bookKey).units;
+    if (!units.has(unitName)) units.set(unitName, new Map());
     const key = lessonKey(word);
-    const lessons = groups.get(bookKey).lessons;
+    const lessons = units.get(unitName);
     if (!lessons.has(key)) lessons.set(key, []);
     lessons.get(key).push(word);
   });
   $('#textbookWordList').innerHTML = [...groups.values()].map((book) => {
-    const bookCount = [...book.lessons.values()].reduce((sum, entries) => sum + entries.length, 0);
-    const lessons = [...book.lessons.entries()].map(([key, entries]) => {
-      const encodedKey = encodeURIComponent(key);
-      const unit = entries[0].unit || '未分课时';
-      const tiles = entries.map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
-        <span class="level-dot"></span><b>${word.char}</b><small>${levelText(word.level)}</small>
-      </button>`).join('');
-      return `<article class="lesson-card"><div class="lesson-card-head"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><div><h4>${escapeHtml(unit)}</h4><small>${entries.length} 个字</small></div><button type="button" data-edit-lesson="${encodedKey}">编辑</button></div><div class="word-list">${tiles}</div></article>`;
+    const allLessons = [...book.units.values()].flatMap((lessons) => [...lessons.values()]);
+    const bookCount = allLessons.reduce((sum, entries) => sum + entries.length, 0);
+    const lessonCount = allLessons.length;
+    const unitsHtml = [...book.units.entries()].map(([unitName, lessons]) => {
+      const unitCount = [...lessons.values()].reduce((sum, entries) => sum + entries.length, 0);
+      const lessonsHtml = [...lessons.entries()].map(([key, entries]) => {
+        const encodedKey = encodeURIComponent(key);
+        const lessonName = entries[0].unit || '未分课时';
+        const tiles = entries.map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
+          <span class="level-dot"></span><b>${word.char}</b><small>${levelText(word.level)}</small>
+        </button>`).join('');
+        return `<details class="lesson-card"><summary class="lesson-card-head"><div><h4>${escapeHtml(lessonName)}</h4><small>${entries.length} 个字</small></div><button type="button" data-edit-lesson="${encodedKey}">编辑</button><span class="lesson-toggle"></span></summary><div class="lesson-select-row"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><b>选择此课时参加乱序复习</b></div><div class="word-list">${tiles}</div></details>`;
+      }).join('');
+      return `<section class="textbook-unit"><div class="textbook-unit-head"><h4>${escapeHtml(unitName)}</h4><span>${lessons.size} 个课时 · ${unitCount} 个字</span></div>${lessonsHtml}</section>`;
     }).join('');
-    return `<section class="textbook-group"><div class="textbook-group-head"><h3>${gradeText(book.grade)} · ${semesterText(book.semester)}</h3><span>${book.lessons.size} 个课时 · ${bookCount} 个字</span></div>${lessons}</section>`;
+    return `<section class="textbook-group"><div class="textbook-group-head"><h3>${gradeText(book.grade)} · ${semesterText(book.semester)}</h3><span>${lessonCount} 个课时 · ${bookCount} 个字</span></div>${unitsHtml}</section>`;
   }).join('');
   updateLessonSelectionUI();
 }
@@ -554,6 +564,8 @@ $('#textbookWordList').addEventListener('change', (event) => {
 $('#textbookWordList').addEventListener('click', (event) => {
   const button = event.target.closest('[data-edit-lesson]');
   if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
   openTextbookDialog(decodeURIComponent(button.dataset.editLesson));
 });
 
