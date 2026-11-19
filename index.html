@@ -39,16 +39,28 @@
       <button class="primary-button" id="startReview">
         <span>开始今日复习</span><span class="arrow">→</span>
       </button>
+      <button class="secondary-button" id="homeReviewAgain" type="button" hidden>
+        <span>再复习一遍</span><span>↻</span>
+      </button>
 
       <div class="section-heading">
-        <h2>我的字库</h2>
+        <h2 id="libraryTitle">录入字库</h2>
         <span id="totalCount">0 个字</span>
       </div>
-      <div id="wordList" class="word-list"></div>
+      <div class="library-tabs" role="tablist" aria-label="字库类型">
+        <button class="active" id="addedTab" type="button" role="tab" aria-selected="true">录入字库</button>
+        <button id="reviewedTab" type="button" role="tab" aria-selected="false">复习记录</button>
+      </div>
+      <div class="date-filter">
+        <button class="filter-all active" id="allDates" type="button">全部日期</button>
+        <label for="libraryDate">选择日期</label>
+        <input id="libraryDate" type="date" />
+      </div>
+      <div id="wordList"></div>
       <div id="emptyLibrary" class="empty-state">
         <div class="empty-mark">字</div>
-        <h3>字库还是空的</h3>
-        <p>添加今天认识的新字，明天也来见见它。</p>
+        <h3 id="emptyLibraryTitle">字库还是空的</h3>
+        <p id="emptyLibraryText">添加今天认识的新字，明天也来见见它。</p>
         <button class="text-button" id="emptyAdd">添加第一个字</button>
       </div>
     </section>
@@ -78,7 +90,7 @@
         <div class="rating-buttons">
           <button data-rating="1"><span>🌱</span><b>再练练</b><small>今天再来</small></button>
           <button data-rating="2"><span>🙂</span><b>有点熟</b><small>2 天后</small></button>
-          <button data-rating="3"><span>⭐</span><b>掌握了</b><small>7 天后</small></button>
+          <button data-rating="3"><span>⭐</span><b>认识</b><small>7 天后</small></button>
         </div>
       </div>
     </section>
@@ -88,8 +100,49 @@
       <p class="eyebrow">今日完成</p>
       <h2>每次见面，<br />都会更熟一点。</h2>
       <p id="completeSummary"></p>
+      <button class="primary-button" id="reviewAgain">再复习一遍</button>
       <button class="primary-button" id="backHome">回到首页</button>
     </section>
+
+    <section id="textbookView" class="view textbook-view">
+      <div class="textbook-banner">
+        <div><p>课本识字</p><strong id="textbookTotal">0</strong><span> 个字</span></div>
+        <div class="book-mark">课</div>
+      </div>
+      <div class="section-heading textbook-heading">
+        <div><p class="eyebrow">小学识字表</p><h2>选择课本</h2></div>
+        <button class="mini-add-button" id="addTextbook" type="button">＋ 录入</button>
+      </div>
+      <div class="textbook-filters">
+        <label for="gradeFilter">年级</label>
+        <select id="gradeFilter">
+          <option value="all">全部年级</option>
+          <option value="1">一年级</option><option value="2">二年级</option><option value="3">三年级</option>
+          <option value="4">四年级</option><option value="5">五年级</option><option value="6">六年级</option>
+        </select>
+        <label for="semesterFilter">学期</label>
+        <select id="semesterFilter">
+          <option value="all">上下册</option><option value="1">上册</option><option value="2">下册</option>
+        </select>
+      </div>
+      <div class="textbook-summary">
+        <span>当前共 <b id="filteredTextbookCount">0</b> 个字</span>
+        <span>已认识 <b id="knownTextbookCount">0</b> 个</span>
+      </div>
+      <button class="primary-button textbook-review-button" id="startTextbookReview" type="button">复习当前识字表</button>
+      <div id="textbookWordList" class="textbook-groups"></div>
+      <div id="emptyTextbook" class="empty-state">
+        <div class="empty-mark">课</div>
+        <h3>还没有课本识字表</h3>
+        <p>选择年级和册别，批量录入课本中的生字。</p>
+        <button class="text-button" id="emptyTextbookAdd" type="button">录入第一份识字表</button>
+      </div>
+    </section>
+
+    <nav class="main-nav" id="mainNav" aria-label="主要功能">
+      <button class="active" id="homeNav" type="button"><span>◉</span><b>今日</b></button>
+      <button id="textbookNav" type="button"><span>田</span><b>课本识字</b></button>
+    </nav>
   </main>
 
   <dialog id="addDialog">
@@ -123,6 +176,28 @@
       <button class="primary-button" id="connectCloud" type="submit">连接并同步</button>
       <button class="disconnect-button" id="disconnectCloud" type="button">断开这个家庭</button>
       <p class="config-note" id="cloudConfigNote"></p>
+    </form>
+  </dialog>
+
+  <dialog id="textbookDialog">
+    <form id="textbookForm" method="dialog">
+      <div class="dialog-head">
+        <div><p class="eyebrow">小学识字表</p><h2>录入课本生字</h2></div>
+        <button type="button" class="close-button" id="closeTextbook">×</button>
+      </div>
+      <div class="textbook-form-row">
+        <div><label for="textbookGrade">年级</label><select id="textbookGrade" required>
+          <option value="1">一年级</option><option value="2">二年级</option><option value="3">三年级</option>
+          <option value="4">四年级</option><option value="5">五年级</option><option value="6">六年级</option>
+        </select></div>
+        <div><label for="textbookSemester">册别</label><select id="textbookSemester" required><option value="1">上册</option><option value="2">下册</option></select></div>
+      </div>
+      <label for="textbookUnit">课次或单元 <span>（选填）</span></label>
+      <input id="textbookUnit" type="text" maxlength="20" placeholder="例如：第一单元、识字 1" />
+      <label for="textbookInput">课本中的生字</label>
+      <textarea id="textbookInput" rows="4" placeholder="可以连续粘贴：天地人你我他" required></textarea>
+      <p class="field-help">自动提取汉字并去重；相同年级和册别中不会重复添加。</p>
+      <button class="primary-button" type="submit">保存识字表</button>
     </form>
   </dialog>
 
