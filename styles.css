@@ -135,6 +135,9 @@ h1 span { color: var(--red); font-size: 17px; }
 .rating-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
 .rating-buttons button { display: flex; flex-direction: column; align-items: center; min-height: 84px; padding: 12px 4px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.7); box-shadow: 0 5px 15px rgba(65,48,29,.05); cursor: pointer; transition: transform .15s, box-shadow .15s; }.rating-buttons button:active { transform: scale(.96); }.rating-again { border-color: rgba(215,82,63,.22)!important; }.rating-familiar { border-color: rgba(240,195,91,.4)!important; }.rating-known { border-color: rgba(79,117,93,.3)!important; background: rgba(79,117,93,.08)!important; }
 .rating-buttons span { font-size: 22px; }.rating-buttons b { margin: 4px 0 2px; font-size: 12px; }.rating-buttons small { color: var(--muted); font-size: 9px; }
+.next-card-button { display: flex; width: 100%; min-height: 48px; margin-top: 11px; align-items: center; justify-content: center; gap: 7px; border: 1px solid rgba(79,117,93,.26); border-radius: 16px; background: rgba(79,117,93,.09); color: #41684f; font-size: 13px; font-weight: 750; cursor: pointer; }
+.next-card-button span { font-size: 16px; }
+.next-card-button:active { transform: scale(.98); }
 .complete-view { padding-top: 18vh; text-align: center; }.complete-view h2 { font: 700 34px/1.4 "STKaiti", serif; }.complete-view > p:not(.eyebrow) { color: var(--muted); font-size: 14px; }
 .celebration { font-size: 60px; margin-bottom: 16px; animation: bounce .6s ease; }@keyframes bounce{50%{transform:scale(1.18) rotate(6deg)}}
 .complete-view .primary-button { margin-top: 35px; }.complete-view #backHome { margin-top: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); }
