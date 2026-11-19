@@ -1,5 +1,7 @@
 const STORAGE_KEY = 'zishiguang-words-v1';
 const HISTORY_KEY = 'zishiguang-history-v1';
+const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
+const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
 const FAMILY_KEY = 'zishiguang-family-v1';
 const CLOUD = window.CLOUD_CONFIG || {};
 
@@ -14,6 +16,11 @@ let reviewedCount = 0;
 let familyId = localStorage.getItem(FAMILY_KEY) || '';
 let syncTimer = null;
 let isSyncing = false;
+let reviewLog = JSON.parse(localStorage.getItem(REVIEW_LOG_KEY) || '{}');
+let libraryMode = 'added';
+let libraryFilters = { added: 'all', reviewed: today() };
+let textbookWords = JSON.parse(localStorage.getItem(TEXTBOOK_KEY) || '[]');
+let reviewContext = 'daily';
 
 const supabaseBaseUrl = () => (CLOUD.url || '').trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/$/, '');
 const cloudConfigured = () => /^https:\/\/.+\.supabase\.co$/i.test(supabaseBaseUrl()) && Boolean(CLOUD.publishableKey);
@@ -26,6 +33,16 @@ function saveWords(sync = true) {
 
 function saveHistory(history, sync = true) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify([...new Set(history)]));
+  if (sync) scheduleCloudPush();
+}
+
+function saveReviewLog(sync = true) {
+  localStorage.setItem(REVIEW_LOG_KEY, JSON.stringify(reviewLog));
+  if (sync) scheduleCloudPush();
+}
+
+function saveTextbookWords(sync = true) {
+  localStorage.setItem(TEXTBOOK_KEY, JSON.stringify(textbookWords));
   if (sync) scheduleCloudPush();
 }
 
@@ -57,6 +74,33 @@ function mergeWords(localWords, remoteWords) {
   return [...merged.values()];
 }
 
+function mergeReviewLogs(localLog, remoteLog) {
+  const merged = {};
+  const dates = new Set([...Object.keys(remoteLog || {}), ...Object.keys(localLog || {})]);
+  dates.forEach((date) => {
+    const byChar = new Map();
+    [...(remoteLog?.[date] || []), ...(localLog?.[date] || [])].forEach((entry) => {
+      const key = `${entry.source || 'daily'}-${entry.wordId || entry.char}`;
+      const existing = byChar.get(key);
+      if (!existing || (entry.reviewedAt || '') >= (existing.reviewedAt || '')) byChar.set(key, entry);
+    });
+    merged[date] = [...byChar.values()];
+  });
+  return merged;
+}
+
+function mergeTextbookWords(localWords, remoteWords) {
+  const merged = new Map();
+  [...remoteWords, ...localWords].forEach((word) => {
+    const key = `${word.grade}-${word.semester}-${word.char}`;
+    const existing = merged.get(key);
+    const score = word.lastReviewed || word.updatedAt || word.createdAt || '';
+    const existingScore = existing && (existing.lastReviewed || existing.updatedAt || existing.createdAt || '');
+    if (!existing || score >= existingScore) merged.set(key, word);
+  });
+  return [...merged.values()];
+}
+
 async function pullAndMergeCloud(showMessage = false) {
   if (!cloudConfigured() || !familyId || isSyncing || !navigator.onLine) return;
   isSyncing = true;
@@ -69,9 +113,14 @@ async function pullAndMergeCloud(showMessage = false) {
     if (rows.length) {
       const payload = rows[0].payload || {};
       words = mergeWords(words, Array.isArray(payload.words) ? payload.words : []);
+      reviewLog = mergeReviewLogs(reviewLog, payload.reviewLog || {});
+      textbookWords = mergeTextbookWords(textbookWords, Array.isArray(payload.textbookWords) ? payload.textbookWords : []);
       saveWords(false);
       saveHistory([...getHistory(), ...(Array.isArray(payload.history) ? payload.history : [])], false);
+      saveReviewLog(false);
+      saveTextbookWords(false);
       renderHome();
+      renderTextbook();
     }
     await pushCloudNow();
     if (showMessage) showToast('家庭字库已同步');
@@ -90,7 +139,7 @@ async function pushCloudNow() {
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: cloudHeaders({ 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
-    body: JSON.stringify({ family_id: familyId, payload: { words, history: getHistory(), version: 1 }, updated_at: new Date().toISOString() })
+    body: JSON.stringify({ family_id: familyId, payload: { words, history: getHistory(), reviewLog, textbookWords, version: 3 }, updated_at: new Date().toISOString() })
   });
   if (!response.ok) throw new Error(`保存失败 (${response.status})`);
 }
@@ -115,25 +164,144 @@ function levelText(level) {
 
 function showView(id) {
   document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === id));
-  $('.topbar').style.display = id === 'homeView' ? 'flex' : 'none';
+  const isMainView = id === 'homeView' || id === 'textbookView';
+  $('.topbar').style.display = isMainView ? 'flex' : 'none';
   $('.hero').style.display = id === 'homeView' ? 'flex' : 'none';
+  $('#mainNav').style.display = isMainView ? 'grid' : 'none';
+  $('#homeNav').classList.toggle('active', id === 'homeView');
+  $('#textbookNav').classList.toggle('active', id === 'textbookView');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderHome() {
   const due = words.filter((word) => !word.nextReview || word.nextReview <= today());
+  const reviewedToday = (reviewLog[today()] || []).filter((entry) => !entry.source || entry.source === 'daily');
   $('#dueCount').textContent = due.length;
-  $('#totalCount').textContent = `${words.length} 个字`;
   $('#startReview').disabled = due.length === 0;
   $('#startReview span:first-child').textContent = due.length ? '开始今日复习' : '今天已经复习完啦';
-  $('#emptyLibrary').classList.toggle('show', words.length === 0);
-  $('#wordList').innerHTML = words
-    .slice()
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((word) => `<button class="word-tile level-${word.level || 0}" data-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
-      <span class="level-dot"></span><b>${word.char}</b><small>${levelText(word.level)}</small>
-    </button>`).join('');
+  $('#homeReviewAgain').hidden = reviewedToday.length === 0;
+  renderLibrary();
   renderStreak();
+}
+
+function renderLibrary() {
+  const filter = libraryFilters[libraryMode];
+  const groups = {};
+  if (libraryMode === 'added') {
+    words.forEach((word) => {
+      if (filter !== 'all' && word.createdAt !== filter) return;
+      (groups[word.createdAt] ||= []).push({ ...word, displayLevel: levelText(word.level) });
+    });
+  } else {
+    Object.entries(reviewLog).forEach(([date, entries]) => {
+      if (filter !== 'all' && date !== filter) return;
+      groups[date] = entries.map((entry) => ({ ...entry, id: `${date}-${entry.char}`, displayLevel: levelText(entry.level) }));
+    });
+  }
+  const dates = Object.keys(groups).sort().reverse();
+  const count = dates.reduce((sum, date) => sum + groups[date].length, 0);
+  $('#libraryTitle').textContent = libraryMode === 'added' ? '录入字库' : '每日复习字库';
+  $('#totalCount').textContent = filter === 'all' ? `共 ${count} 个字` : `${count} 个字`;
+  $('#addedTab').classList.toggle('active', libraryMode === 'added');
+  $('#reviewedTab').classList.toggle('active', libraryMode === 'reviewed');
+  $('#addedTab').setAttribute('aria-selected', libraryMode === 'added');
+  $('#reviewedTab').setAttribute('aria-selected', libraryMode === 'reviewed');
+  $('#allDates').classList.toggle('active', filter === 'all');
+  $('#libraryDate').value = filter === 'all' ? '' : filter;
+  $('#wordList').innerHTML = dates.map((date) => {
+    const entries = groups[date].sort((a, b) => (a.char || '').localeCompare(b.char || '', 'zh-CN'));
+    const tiles = entries.map((entry) => `<button class="word-tile level-${entry.level || 0}" data-id="${entry.id}" aria-label="${entry.char}，${entry.displayLevel}">
+      <span class="level-dot"></span><b>${entry.char}</b><small>${entry.displayLevel}</small>
+    </button>`).join('');
+    return `<section class="date-group"><div class="date-group-head"><h3>${formatDate(date)}</h3><span>${entries.length} 个字</span></div><div class="word-list">${tiles}</div></section>`;
+  }).join('');
+  const empty = count === 0;
+  $('#emptyLibrary').classList.toggle('show', empty);
+  $('#emptyAdd').style.display = libraryMode === 'added' ? 'inline-block' : 'none';
+  $('#emptyLibraryTitle').textContent = libraryMode === 'added' ? '这一天还没有录入汉字' : '这一天还没有复习记录';
+  $('#emptyLibraryText').textContent = libraryMode === 'added' ? '添加认识的新字，它会出现在这里。' : '完成复习后，系统会自动记录当天复习的字。';
+}
+
+function switchLibraryMode(mode) {
+  libraryMode = mode;
+  renderLibrary();
+}
+
+function gradeText(grade) {
+  return ['','一','二','三','四','五','六'][Number(grade)] + '年级';
+}
+
+function semesterText(semester) {
+  return Number(semester) === 1 ? '上册' : '下册';
+}
+
+function getFilteredTextbookWords() {
+  const grade = $('#gradeFilter').value;
+  const semester = $('#semesterFilter').value;
+  return textbookWords.filter((word) => (grade === 'all' || String(word.grade) === grade) && (semester === 'all' || String(word.semester) === semester));
+}
+
+function renderTextbook() {
+  const filtered = getFilteredTextbookWords();
+  $('#textbookTotal').textContent = textbookWords.length;
+  $('#filteredTextbookCount').textContent = filtered.length;
+  $('#knownTextbookCount').textContent = filtered.filter((word) => word.level === 3).length;
+  $('#startTextbookReview').disabled = filtered.length === 0;
+  $('#emptyTextbook').classList.toggle('show', filtered.length === 0);
+  const groups = {};
+  filtered.forEach((word) => {
+    const key = `${word.grade}-${word.semester}`;
+    (groups[key] ||= []).push(word);
+  });
+  $('#textbookWordList').innerHTML = Object.keys(groups).sort().map((key) => {
+    const entries = groups[key];
+    const first = entries[0];
+    const tiles = entries.slice().sort((a, b) => (a.unit || '').localeCompare(b.unit || '', 'zh-CN') || a.char.localeCompare(b.char, 'zh-CN')).map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
+      <span class="level-dot"></span><b>${word.char}</b><small>${word.unit || levelText(word.level)}</small>
+    </button>`).join('');
+    return `<section class="textbook-group"><div class="textbook-group-head"><h3>${gradeText(first.grade)} · ${semesterText(first.semester)}</h3><span>${entries.length} 个字</span></div><div class="word-list">${tiles}</div></section>`;
+  }).join('');
+}
+
+function openTextbookDialog() {
+  const grade = $('#gradeFilter').value;
+  const semester = $('#semesterFilter').value;
+  if (grade !== 'all') $('#textbookGrade').value = grade;
+  if (semester !== 'all') $('#textbookSemester').value = semester;
+  $('#textbookDialog').showModal();
+  setTimeout(() => $('#textbookInput').focus(), 100);
+}
+
+function addTextbookWords(event) {
+  event.preventDefault();
+  const chars = [...new Set([...$('#textbookInput').value].filter((char) => /[\u3400-\u9fff]/.test(char)))];
+  if (!chars.length) return showToast('请输入至少一个汉字');
+  const grade = Number($('#textbookGrade').value);
+  const semester = Number($('#textbookSemester').value);
+  const unit = $('#textbookUnit').value.trim();
+  let added = 0;
+  chars.forEach((char, index) => {
+    if (textbookWords.some((word) => word.char === char && word.grade === grade && word.semester === semester)) return;
+    textbookWords.push({ id: `tb-${Date.now()}-${index}-${char}`, char, grade, semester, unit, level: 0, reviewCount: 0, createdAt: today(), source: 'textbook' });
+    added += 1;
+  });
+  saveTextbookWords();
+  $('#gradeFilter').value = String(grade);
+  $('#semesterFilter').value = String(semester);
+  renderTextbook();
+  $('#textbookDialog').close();
+  $('#textbookForm').reset();
+  showToast(added ? `已录入 ${added} 个课本生字` : '这些字已在本册识字表中');
+}
+
+function startTextbookReview() {
+  queue = getFilteredTextbookWords().map((word) => ({ ...word, source: 'textbook' }));
+  if (!queue.length) return;
+  reviewContext = 'textbook';
+  queueIndex = 0;
+  reviewedCount = 0;
+  showView('reviewView');
+  renderCard();
 }
 
 function renderStreak() {
@@ -175,8 +343,9 @@ function addWords(event) {
 }
 
 function startReview() {
-  queue = words.filter((word) => !word.nextReview || word.nextReview <= today());
+  queue = words.filter((word) => !word.nextReview || word.nextReview <= today()).map((word) => ({ ...word, source: 'daily' }));
   if (!queue.length) return;
+  reviewContext = 'daily';
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
@@ -189,23 +358,39 @@ function renderCard() {
   card.className = 'word-card enter';
   $('#reviewWord').textContent = word.char;
   $('#memoryCue').textContent = word.note || `大声读一读「${word.char}」`;
-  $('#reviewDate').textContent = `${formatDate(word.createdAt)}认识`;
+  $('#reviewDate').textContent = word.source === 'textbook'
+    ? `${gradeText(word.grade)}${semesterText(word.semester)}${word.unit ? ` · ${word.unit}` : ''}`
+    : `${formatDate(word.createdAt)}认识`;
   $('#reviewProgress').textContent = `${queueIndex + 1} / ${queue.length}`;
   $('#progressBar').style.width = `${(queueIndex / queue.length) * 100}%`;
 }
 
 function rateWord(level) {
   window.speechSynthesis?.cancel();
+  if (level === 3) speakFeedback('圈圈，你真是太棒了');
+  if (level === 2) speakFeedback('很好，圈圈，下次就认识了');
+  if (level === 1) speakFeedback('圈圈，你要加油哦，我相信你');
   const current = queue[queueIndex];
-  const word = words.find((item) => item.id === current.id);
+  const isTextbook = current.source === 'textbook' || reviewContext === 'textbook';
+  const collection = isTextbook ? textbookWords : words;
+  const word = collection.find((item) => item.id === current.id);
+  if (!word) return showToast('没有找到这个字，请返回后重试');
   const days = level === 1 ? 0 : level === 2 ? 2 : 7;
   const next = new Date();
   next.setDate(next.getDate() + days);
   word.level = level;
   word.reviewCount = (word.reviewCount || 0) + 1;
   word.lastReviewed = today();
-  word.nextReview = next.toLocaleDateString('sv-SE');
-  saveWords();
+  if (!isTextbook) word.nextReview = next.toLocaleDateString('sv-SE');
+  const date = today();
+  const entries = reviewLog[date] ||= [];
+  const logEntry = { char: word.char, level, reviewedAt: new Date().toISOString(), source: isTextbook ? 'textbook' : 'daily', wordId: word.id };
+  const existingEntry = entries.find((entry) => entry.char === word.char && (entry.source || 'daily') === logEntry.source && (!entry.wordId || entry.wordId === word.id));
+  if (existingEntry) Object.assign(existingEntry, logEntry);
+  else entries.push(logEntry);
+  saveReviewLog();
+  if (isTextbook) saveTextbookWords();
+  else saveWords();
   reviewedCount += 1;
 
   const card = $('#wordCard');
@@ -221,7 +406,8 @@ function finishReview() {
   const history = getHistory();
   if (!history.includes(today())) history.push(today());
   saveHistory(history);
-  $('#completeSummary').textContent = `你刚刚复习了 ${reviewedCount} 个字，真不错。`;
+  $('#completeSummary').textContent = `你刚刚复习了 ${reviewedCount} 个${reviewContext === 'textbook' ? '课本生' : ''}字，真不错。`;
+  $('#backHome').textContent = reviewContext === 'textbook' ? '回到课本识字' : '回到首页';
   showView('completeView');
 }
 
@@ -248,6 +434,47 @@ function speakCurrentWord(event) {
   utterance.onstart = () => button.classList.add('speaking');
   utterance.onend = utterance.onerror = () => button.classList.remove('speaking');
   window.speechSynthesis.speak(utterance);
+}
+
+function speakFeedback(message) {
+  if (!('speechSynthesis' in window)) return;
+  const utterance = new SpeechSynthesisUtterance(message);
+  utterance.lang = 'zh-CN';
+  utterance.rate = 0.82;
+  utterance.pitch = 1.08;
+  const chineseVoice = window.speechSynthesis.getVoices().find((voice) => /^zh[-_]/i.test(voice.lang));
+  if (chineseVoice) utterance.voice = chineseVoice;
+  window.speechSynthesis.speak(utterance);
+}
+
+function reviewAgain() {
+  if (!queue.length) return showView('homeView');
+  queue = queue.map((queuedWord) => {
+    const collection = queuedWord.source === 'textbook' ? textbookWords : words;
+    return { ...(collection.find((word) => word.id === queuedWord.id) || queuedWord), source: queuedWord.source };
+  });
+  queueIndex = 0;
+  reviewedCount = 0;
+  showView('reviewView');
+  renderCard();
+}
+
+function reviewTodayAgain() {
+  const reviewedChars = new Set((reviewLog[today()] || []).filter((entry) => !entry.source || entry.source === 'daily').map((entry) => entry.char));
+  queue = words.filter((word) => reviewedChars.has(word.char));
+  if (!queue.length) return showToast('今天还没有可重复复习的字');
+  reviewContext = 'daily';
+  queueIndex = 0;
+  reviewedCount = 0;
+  showView('reviewView');
+  renderCard();
+}
+
+function returnFromReview() {
+  const target = reviewContext === 'textbook' ? 'textbookView' : 'homeView';
+  showView(target);
+  if (target === 'textbookView') renderTextbook();
+  else renderHome();
 }
 
 function openCloudDialog() {
@@ -294,14 +521,29 @@ $('#closeCloud').addEventListener('click', () => $('#cloudDialog').close());
 $('#cloudForm').addEventListener('submit', connectFamily);
 $('#disconnectCloud').addEventListener('click', disconnectFamily);
 $('#emptyAdd').addEventListener('click', openAddDialog);
+$('#addedTab').addEventListener('click', () => switchLibraryMode('added'));
+$('#reviewedTab').addEventListener('click', () => switchLibraryMode('reviewed'));
+$('#allDates').addEventListener('click', () => { libraryFilters[libraryMode] = 'all'; renderLibrary(); });
+$('#libraryDate').addEventListener('change', (event) => { libraryFilters[libraryMode] = event.target.value || 'all'; renderLibrary(); });
 $('#closeAdd').addEventListener('click', () => $('#addDialog').close());
 $('#addForm').addEventListener('submit', addWords);
 $('#startReview').addEventListener('click', startReview);
-$('#exitReview').addEventListener('click', () => { showView('homeView'); renderHome(); });
+$('#exitReview').addEventListener('click', returnFromReview);
 $('#wordCard').addEventListener('click', () => $('#wordCard').classList.toggle('revealed'));
 $('#speakWord').addEventListener('click', speakCurrentWord);
 document.querySelectorAll('[data-rating]').forEach((button) => button.addEventListener('click', () => rateWord(Number(button.dataset.rating))));
-$('#backHome').addEventListener('click', () => { showView('homeView'); renderHome(); });
+$('#backHome').addEventListener('click', returnFromReview);
+$('#reviewAgain').addEventListener('click', reviewAgain);
+$('#homeReviewAgain').addEventListener('click', reviewTodayAgain);
+$('#homeNav').addEventListener('click', () => { showView('homeView'); renderHome(); });
+$('#textbookNav').addEventListener('click', () => { showView('textbookView'); renderTextbook(); });
+$('#gradeFilter').addEventListener('change', renderTextbook);
+$('#semesterFilter').addEventListener('change', renderTextbook);
+$('#addTextbook').addEventListener('click', openTextbookDialog);
+$('#emptyTextbookAdd').addEventListener('click', openTextbookDialog);
+$('#closeTextbook').addEventListener('click', () => $('#textbookDialog').close());
+$('#textbookForm').addEventListener('submit', addTextbookWords);
+$('#startTextbookReview').addEventListener('click', startTextbookReview);
 
 let touchStartX = 0;
 $('#wordCard').addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
@@ -323,4 +565,5 @@ window.addEventListener('online', () => pullAndMergeCloud());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullAndMergeCloud(); });
 setCloudStatus(familyId && cloudConfigured() ? 'online' : '', familyId && cloudConfigured() ? '云同步' : (cloudConfigured() ? '未连接' : '本地'));
 renderHome();
+renderTextbook();
 if (familyId && cloudConfigured()) pullAndMergeCloud();
