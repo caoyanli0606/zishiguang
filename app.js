@@ -8,6 +8,22 @@ const today = () => new Date().toLocaleDateString('sv-SE');
 const formatDate = (date) => new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(new Date(`${date}T12:00:00`));
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 
+function showDialog(dialog) {
+  try {
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else throw new Error('dialog unsupported');
+  } catch (error) {
+    dialog.classList.add('fallback-dialog');
+    dialog.setAttribute('open', '');
+  }
+}
+
+function closeDialog(dialog) {
+  if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+  else dialog.removeAttribute('open');
+  dialog.classList.remove('fallback-dialog');
+}
+
 let words = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 let queue = [];
 let queueIndex = 0;
@@ -197,7 +213,7 @@ function openTextbookDialog(key = null) {
   const semester = $('#semesterFilter').value;
   if (!isEditing && grade !== 'all') $('#textbookGrade').value = grade;
   if (!isEditing && semester !== 'all') $('#textbookSemester').value = semester;
-  $('#textbookDialog').showModal();
+  showDialog($('#textbookDialog'));
   setTimeout(() => $('#textbookInput').focus(), 100);
 }
 
@@ -226,7 +242,7 @@ function addTextbookWords(event) {
     saveTextbookWords();
     editingLessonKey = null;
     renderTextbook();
-    $('#textbookDialog').close();
+    closeDialog($('#textbookDialog'));
     showToast(acceptedChars.length < chars.length ? '课时已保存，已跳过本册中的重复字' : '课时修改已保存');
     return;
   }
@@ -240,7 +256,7 @@ function addTextbookWords(event) {
   $('#gradeFilter').value = String(grade);
   $('#semesterFilter').value = String(semester);
   renderTextbook();
-  $('#textbookDialog').close();
+  closeDialog($('#textbookDialog'));
   $('#textbookForm').reset();
   showToast(added ? `已录入 ${added} 个课本生字` : '这些字已在本册识字表中');
 }
@@ -291,7 +307,7 @@ function renderStreak() {
 
 function openAddDialog() {
   $('#wordDate').value = today();
-  $('#addDialog').showModal();
+  showDialog($('#addDialog'));
   setTimeout(() => $('#wordInput').focus(), 100);
 }
 
@@ -310,7 +326,7 @@ function addWords(event) {
   });
   saveWords();
   renderHome();
-  $('#addDialog').close();
+  closeDialog($('#addDialog'));
   $('#addForm').reset();
   showToast(added ? `已添加 ${added} 个字` : '这些字已经在字库里啦');
 }
@@ -460,7 +476,7 @@ $('#addedTab').addEventListener('click', () => switchLibraryMode('added'));
 $('#reviewedTab').addEventListener('click', () => switchLibraryMode('reviewed'));
 $('#allDates').addEventListener('click', () => { libraryFilters[libraryMode] = 'all'; renderLibrary(); });
 $('#libraryDate').addEventListener('change', (event) => { libraryFilters[libraryMode] = event.target.value || 'all'; renderLibrary(); });
-$('#closeAdd').addEventListener('click', () => $('#addDialog').close());
+$('#closeAdd').addEventListener('click', () => closeDialog($('#addDialog')));
 $('#addForm').addEventListener('submit', addWords);
 $('#startReview').addEventListener('click', startReview);
 $('#exitReview').addEventListener('click', returnFromReview);
@@ -476,7 +492,7 @@ $('#gradeFilter').addEventListener('change', renderTextbook);
 $('#semesterFilter').addEventListener('change', renderTextbook);
 $('#addTextbook').addEventListener('click', () => openTextbookDialog());
 $('#emptyTextbookAdd').addEventListener('click', () => openTextbookDialog());
-$('#closeTextbook').addEventListener('click', () => $('#textbookDialog').close());
+$('#closeTextbook').addEventListener('click', () => closeDialog($('#textbookDialog')));
 $('#textbookForm').addEventListener('submit', addTextbookWords);
 $('#startTextbookReview').addEventListener('click', startTextbookReview);
 $('#shuffleLessonReview').addEventListener('click', startShuffledLessonReview);
