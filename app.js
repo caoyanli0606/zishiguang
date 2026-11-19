@@ -2,160 +2,40 @@ const STORAGE_KEY = 'zishiguang-words-v1';
 const HISTORY_KEY = 'zishiguang-history-v1';
 const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
 const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
-const FAMILY_KEY = 'zishiguang-family-v1';
-const CLOUD = window.CLOUD_CONFIG || {};
 
 const $ = (selector) => document.querySelector(selector);
 const today = () => new Date().toLocaleDateString('sv-SE');
 const formatDate = (date) => new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(new Date(`${date}T12:00:00`));
+const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 
 let words = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 let queue = [];
 let queueIndex = 0;
 let reviewedCount = 0;
-let familyId = localStorage.getItem(FAMILY_KEY) || '';
-let syncTimer = null;
-let isSyncing = false;
 let reviewLog = JSON.parse(localStorage.getItem(REVIEW_LOG_KEY) || '{}');
 let libraryMode = 'added';
 let libraryFilters = { added: 'all', reviewed: today() };
 let textbookWords = JSON.parse(localStorage.getItem(TEXTBOOK_KEY) || '[]');
 let reviewContext = 'daily';
+let selectedLessonKeys = new Set();
+let editingLessonKey = null;
 
-const supabaseBaseUrl = () => (CLOUD.url || '').trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/$/, '');
-const cloudConfigured = () => /^https:\/\/.+\.supabase\.co$/i.test(supabaseBaseUrl()) && Boolean(CLOUD.publishableKey);
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
-function saveWords(sync = true) {
+function saveWords() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
-  if (sync) scheduleCloudPush();
 }
 
-function saveHistory(history, sync = true) {
+function saveHistory(history) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify([...new Set(history)]));
-  if (sync) scheduleCloudPush();
 }
 
-function saveReviewLog(sync = true) {
+function saveReviewLog() {
   localStorage.setItem(REVIEW_LOG_KEY, JSON.stringify(reviewLog));
-  if (sync) scheduleCloudPush();
 }
 
-function saveTextbookWords(sync = true) {
+function saveTextbookWords() {
   localStorage.setItem(TEXTBOOK_KEY, JSON.stringify(textbookWords));
-  if (sync) scheduleCloudPush();
-}
-
-function setCloudStatus(status, label) {
-  const button = $('#openCloud');
-  button.className = `cloud-button ${status}`;
-  $('#cloudLabel').textContent = label;
-}
-
-function cloudHeaders(extra = {}) {
-  return { apikey: CLOUD.publishableKey, Authorization: `Bearer ${CLOUD.publishableKey}`, 'x-family-id': familyId, ...extra };
-}
-
-async function hashFamilyCode(code) {
-  const bytes = new TextEncoder().encode(`字时光-family-v1:${code.trim()}`);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function mergeWords(localWords, remoteWords) {
-  const merged = new Map();
-  [...remoteWords, ...localWords].forEach((word) => {
-    const key = word.char;
-    const existing = merged.get(key);
-    const score = word.lastReviewed || word.updatedAt || word.createdAt || '';
-    const existingScore = existing && (existing.lastReviewed || existing.updatedAt || existing.createdAt || '');
-    if (!existing || score >= existingScore) merged.set(key, word);
-  });
-  return [...merged.values()];
-}
-
-function mergeReviewLogs(localLog, remoteLog) {
-  const merged = {};
-  const dates = new Set([...Object.keys(remoteLog || {}), ...Object.keys(localLog || {})]);
-  dates.forEach((date) => {
-    const byChar = new Map();
-    [...(remoteLog?.[date] || []), ...(localLog?.[date] || [])].forEach((entry) => {
-      const key = `${entry.source || 'daily'}-${entry.wordId || entry.char}`;
-      const existing = byChar.get(key);
-      if (!existing || (entry.reviewedAt || '') >= (existing.reviewedAt || '')) byChar.set(key, entry);
-    });
-    merged[date] = [...byChar.values()];
-  });
-  return merged;
-}
-
-function mergeTextbookWords(localWords, remoteWords) {
-  const merged = new Map();
-  [...remoteWords, ...localWords].forEach((word) => {
-    const key = `${word.grade}-${word.semester}-${word.char}`;
-    const existing = merged.get(key);
-    const score = word.lastReviewed || word.updatedAt || word.createdAt || '';
-    const existingScore = existing && (existing.lastReviewed || existing.updatedAt || existing.createdAt || '');
-    if (!existing || score >= existingScore) merged.set(key, word);
-  });
-  return [...merged.values()];
-}
-
-async function pullAndMergeCloud(showMessage = false) {
-  if (!cloudConfigured() || !familyId || isSyncing || !navigator.onLine) return;
-  isSyncing = true;
-  setCloudStatus('syncing', '同步中');
-  try {
-    const endpoint = `${supabaseBaseUrl()}/rest/v1/family_data?family_id=eq.${familyId}&select=payload`;
-    const response = await fetch(endpoint, { headers: cloudHeaders() });
-    if (!response.ok) throw new Error(`读取失败 (${response.status})`);
-    const rows = await response.json();
-    if (rows.length) {
-      const payload = rows[0].payload || {};
-      words = mergeWords(words, Array.isArray(payload.words) ? payload.words : []);
-      reviewLog = mergeReviewLogs(reviewLog, payload.reviewLog || {});
-      textbookWords = mergeTextbookWords(textbookWords, Array.isArray(payload.textbookWords) ? payload.textbookWords : []);
-      saveWords(false);
-      saveHistory([...getHistory(), ...(Array.isArray(payload.history) ? payload.history : [])], false);
-      saveReviewLog(false);
-      saveTextbookWords(false);
-      renderHome();
-      renderTextbook();
-    }
-    await pushCloudNow();
-    if (showMessage) showToast('家庭字库已同步');
-  } catch (error) {
-    setCloudStatus('error', '同步失败');
-    if (showMessage) showToast(error.message || '云端连接失败');
-  } finally {
-    isSyncing = false;
-    if (familyId && $('#cloudLabel').textContent !== '同步失败') setCloudStatus('online', '已同步');
-  }
-}
-
-async function pushCloudNow() {
-  if (!cloudConfigured() || !familyId || !navigator.onLine) return;
-  const endpoint = `${supabaseBaseUrl()}/rest/v1/family_data?on_conflict=family_id`;
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: cloudHeaders({ 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
-    body: JSON.stringify({ family_id: familyId, payload: { words, history: getHistory(), reviewLog, textbookWords, version: 3 }, updated_at: new Date().toISOString() })
-  });
-  if (!response.ok) throw new Error(`保存失败 (${response.status})`);
-}
-
-function scheduleCloudPush() {
-  if (!familyId || !cloudConfigured()) return;
-  clearTimeout(syncTimer);
-  setCloudStatus('syncing', '待同步');
-  syncTimer = setTimeout(async () => {
-    try {
-      await pushCloudNow();
-      setCloudStatus('online', '已同步');
-    } catch (error) {
-      setCloudStatus('error', '同步失败');
-    }
-  }, 700);
 }
 
 function levelText(level) {
@@ -241,33 +121,82 @@ function getFilteredTextbookWords() {
   return textbookWords.filter((word) => (grade === 'all' || String(word.grade) === grade) && (semester === 'all' || String(word.semester) === semester));
 }
 
+function lessonKey(word) {
+  return `${word.grade}|${word.semester}|${word.unit || '未分课时'}`;
+}
+
+function sortTextbookWords(entries) {
+  return entries.slice().sort((a, b) => Number(a.grade) - Number(b.grade)
+    || Number(a.semester) - Number(b.semester)
+    || (a.unit || '未分课时').localeCompare(b.unit || '未分课时', 'zh-CN', { numeric: true })
+    || a.char.localeCompare(b.char, 'zh-CN'));
+}
+
+function visibleLessonKeys() {
+  return [...new Set(getFilteredTextbookWords().map(lessonKey))];
+}
+
+function updateLessonSelectionUI() {
+  const visibleKeys = visibleLessonKeys();
+  const selectedCount = selectedLessonKeys.size;
+  $('#lessonReviewTools').hidden = textbookWords.length === 0;
+  $('#shuffleLessonReview').hidden = selectedCount === 0;
+  $('#selectedLessonCount').textContent = selectedCount;
+  $('#toggleAllLessons').textContent = visibleKeys.length && visibleKeys.every((key) => selectedLessonKeys.has(key)) ? '取消全选当前' : '全选当前';
+}
+
 function renderTextbook() {
-  const filtered = getFilteredTextbookWords();
+  const filtered = sortTextbookWords(getFilteredTextbookWords());
   $('#textbookTotal').textContent = textbookWords.length;
   $('#filteredTextbookCount').textContent = filtered.length;
   $('#knownTextbookCount').textContent = filtered.filter((word) => word.level === 3).length;
   $('#startTextbookReview').disabled = filtered.length === 0;
   $('#emptyTextbook').classList.toggle('show', filtered.length === 0);
-  const groups = {};
+  const groups = new Map();
   filtered.forEach((word) => {
-    const key = `${word.grade}-${word.semester}`;
-    (groups[key] ||= []).push(word);
+    const bookKey = `${word.grade}-${word.semester}`;
+    if (!groups.has(bookKey)) groups.set(bookKey, { grade: word.grade, semester: word.semester, lessons: new Map() });
+    const key = lessonKey(word);
+    const lessons = groups.get(bookKey).lessons;
+    if (!lessons.has(key)) lessons.set(key, []);
+    lessons.get(key).push(word);
   });
-  $('#textbookWordList').innerHTML = Object.keys(groups).sort().map((key) => {
-    const entries = groups[key];
-    const first = entries[0];
-    const tiles = entries.slice().sort((a, b) => (a.unit || '').localeCompare(b.unit || '', 'zh-CN') || a.char.localeCompare(b.char, 'zh-CN')).map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
-      <span class="level-dot"></span><b>${word.char}</b><small>${word.unit || levelText(word.level)}</small>
-    </button>`).join('');
-    return `<section class="textbook-group"><div class="textbook-group-head"><h3>${gradeText(first.grade)} · ${semesterText(first.semester)}</h3><span>${entries.length} 个字</span></div><div class="word-list">${tiles}</div></section>`;
+  $('#textbookWordList').innerHTML = [...groups.values()].map((book) => {
+    const bookCount = [...book.lessons.values()].reduce((sum, entries) => sum + entries.length, 0);
+    const lessons = [...book.lessons.entries()].map(([key, entries]) => {
+      const encodedKey = encodeURIComponent(key);
+      const unit = entries[0].unit || '未分课时';
+      const tiles = entries.map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
+        <span class="level-dot"></span><b>${word.char}</b><small>${levelText(word.level)}</small>
+      </button>`).join('');
+      return `<article class="lesson-card"><div class="lesson-card-head"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><div><h4>${escapeHtml(unit)}</h4><small>${entries.length} 个字</small></div><button type="button" data-edit-lesson="${encodedKey}">编辑</button></div><div class="word-list">${tiles}</div></article>`;
+    }).join('');
+    return `<section class="textbook-group"><div class="textbook-group-head"><h3>${gradeText(book.grade)} · ${semesterText(book.semester)}</h3><span>${book.lessons.size} 个课时 · ${bookCount} 个字</span></div>${lessons}</section>`;
   }).join('');
+  updateLessonSelectionUI();
 }
 
-function openTextbookDialog() {
+function openTextbookDialog(key = null) {
+  $('#textbookForm').reset();
+  editingLessonKey = key;
+  const isEditing = Boolean(key);
+  $('#textbookDialogTitle').textContent = isEditing ? '编辑课时识字表' : '录入课本生字';
+  $('#textbookSubmit').textContent = isEditing ? '保存课时修改' : '保存识字表';
+  $('#textbookGrade').disabled = isEditing;
+  $('#textbookSemester').disabled = isEditing;
+  if (isEditing) {
+    const entries = textbookWords.filter((word) => lessonKey(word) === key);
+    if (!entries.length) return showToast('没有找到这个课时');
+    const first = entries[0];
+    $('#textbookGrade').value = String(first.grade);
+    $('#textbookSemester').value = String(first.semester);
+    $('#textbookUnit').value = first.unit || '未分课时';
+    $('#textbookInput').value = entries.map((word) => word.char).join('');
+  }
   const grade = $('#gradeFilter').value;
   const semester = $('#semesterFilter').value;
-  if (grade !== 'all') $('#textbookGrade').value = grade;
-  if (semester !== 'all') $('#textbookSemester').value = semester;
+  if (!isEditing && grade !== 'all') $('#textbookGrade').value = grade;
+  if (!isEditing && semester !== 'all') $('#textbookSemester').value = semester;
   $('#textbookDialog').showModal();
   setTimeout(() => $('#textbookInput').focus(), 100);
 }
@@ -279,6 +208,28 @@ function addTextbookWords(event) {
   const grade = Number($('#textbookGrade').value);
   const semester = Number($('#textbookSemester').value);
   const unit = $('#textbookUnit').value.trim();
+  if (!unit) return showToast('请填写课时名称');
+  if (editingLessonKey) {
+    const oldEntries = textbookWords.filter((word) => lessonKey(word) === editingLessonKey);
+    const oldIds = new Set(oldEntries.map((word) => word.id));
+    const acceptedChars = chars.filter((char) => !textbookWords.some((word) => !oldIds.has(word.id) && word.grade === grade && word.semester === semester && word.char === char));
+    const acceptedSet = new Set(acceptedChars);
+    const wasSelected = selectedLessonKeys.delete(editingLessonKey);
+    textbookWords = textbookWords.filter((word) => !oldIds.has(word.id) || acceptedSet.has(word.char));
+    textbookWords.forEach((word) => { if (oldIds.has(word.id)) word.unit = unit; });
+    acceptedChars.forEach((char, index) => {
+      if (!textbookWords.some((word) => oldIds.has(word.id) && word.char === char)) {
+        textbookWords.push({ id: `tb-${Date.now()}-${index}-${char}`, char, grade, semester, unit, level: 0, reviewCount: 0, createdAt: today(), source: 'textbook' });
+      }
+    });
+    if (wasSelected) selectedLessonKeys.add(`${grade}|${semester}|${unit}`);
+    saveTextbookWords();
+    editingLessonKey = null;
+    renderTextbook();
+    $('#textbookDialog').close();
+    showToast(acceptedChars.length < chars.length ? '课时已保存，已跳过本册中的重复字' : '课时修改已保存');
+    return;
+  }
   let added = 0;
   chars.forEach((char, index) => {
     if (textbookWords.some((word) => word.char === char && word.grade === grade && word.semester === semester)) return;
@@ -295,13 +246,35 @@ function addTextbookWords(event) {
 }
 
 function startTextbookReview() {
-  queue = getFilteredTextbookWords().map((word) => ({ ...word, source: 'textbook' }));
+  queue = sortTextbookWords(getFilteredTextbookWords()).map((word) => ({ ...word, source: 'textbook' }));
   if (!queue.length) return;
   reviewContext = 'textbook';
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
   renderCard();
+}
+
+function startShuffledLessonReview() {
+  const selectedWords = textbookWords.filter((word) => selectedLessonKeys.has(lessonKey(word))).map((word) => ({ ...word, source: 'textbook' }));
+  if (!selectedWords.length) return showToast('请先选择至少一个课时');
+  for (let index = selectedWords.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [selectedWords[index], selectedWords[randomIndex]] = [selectedWords[randomIndex], selectedWords[index]];
+  }
+  queue = selectedWords;
+  reviewContext = 'textbook';
+  queueIndex = 0;
+  reviewedCount = 0;
+  showView('reviewView');
+  renderCard();
+}
+
+function toggleAllVisibleLessons() {
+  const keys = visibleLessonKeys();
+  const shouldSelect = !keys.every((key) => selectedLessonKeys.has(key));
+  keys.forEach((key) => shouldSelect ? selectedLessonKeys.add(key) : selectedLessonKeys.delete(key));
+  renderTextbook();
 }
 
 function renderStreak() {
@@ -477,49 +450,11 @@ function returnFromReview() {
   else renderHome();
 }
 
-function openCloudDialog() {
-  const connected = Boolean(familyId);
-  $('#familyCode').value = '';
-  $('#familyCode').disabled = connected;
-  $('#connectCloud').style.display = connected ? 'none' : 'flex';
-  $('#disconnectCloud').classList.toggle('show', connected);
-  $('#cloudConfigNote').textContent = cloudConfigured()
-    ? (connected ? '当前设备已连接家庭字库。口令原文没有保存在设备或云端。' : '首次连接会合并本机记录与云端记录。')
-    : '云端尚未配置。请先按 CLOUD_SETUP.md 完成一次数据库连接。';
-  $('#cloudDialog').showModal();
-  if (!connected && cloudConfigured()) setTimeout(() => $('#familyCode').focus(), 100);
-}
-
-async function connectFamily(event) {
-  event.preventDefault();
-  if (!cloudConfigured()) return showToast('请先完成云端配置');
-  const code = $('#familyCode').value.trim();
-  if (code.length < 8) return showToast('家庭口令至少需要 8 位');
-  $('#connectCloud').disabled = true;
-  $('#connectCloud').textContent = '正在连接…';
-  familyId = await hashFamilyCode(code);
-  localStorage.setItem(FAMILY_KEY, familyId);
-  await pullAndMergeCloud(true);
-  $('#connectCloud').disabled = false;
-  $('#connectCloud').textContent = '连接并同步';
-  if ($('#cloudLabel').textContent === '已同步') $('#cloudDialog').close();
-}
-
-function disconnectFamily() {
-  if (!confirm('断开后本机记录会保留，但不再与家庭同步。确定断开吗？')) return;
-  familyId = '';
-  localStorage.removeItem(FAMILY_KEY);
-  setCloudStatus('', cloudConfigured() ? '未连接' : '本地');
-  $('#cloudDialog').close();
-  showToast('已断开，手机上的记录仍保留');
-}
-
 $('#todayLabel').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
-$('#openAdd').addEventListener('click', openAddDialog);
-$('#openCloud').addEventListener('click', openCloudDialog);
-$('#closeCloud').addEventListener('click', () => $('#cloudDialog').close());
-$('#cloudForm').addEventListener('submit', connectFamily);
-$('#disconnectCloud').addEventListener('click', disconnectFamily);
+$('#openAdd').addEventListener('click', () => {
+  if ($('#textbookView').classList.contains('active')) openTextbookDialog();
+  else openAddDialog();
+});
 $('#emptyAdd').addEventListener('click', openAddDialog);
 $('#addedTab').addEventListener('click', () => switchLibraryMode('added'));
 $('#reviewedTab').addEventListener('click', () => switchLibraryMode('reviewed'));
@@ -539,11 +474,26 @@ $('#homeNav').addEventListener('click', () => { showView('homeView'); renderHome
 $('#textbookNav').addEventListener('click', () => { showView('textbookView'); renderTextbook(); });
 $('#gradeFilter').addEventListener('change', renderTextbook);
 $('#semesterFilter').addEventListener('change', renderTextbook);
-$('#addTextbook').addEventListener('click', openTextbookDialog);
-$('#emptyTextbookAdd').addEventListener('click', openTextbookDialog);
+$('#addTextbook').addEventListener('click', () => openTextbookDialog());
+$('#emptyTextbookAdd').addEventListener('click', () => openTextbookDialog());
 $('#closeTextbook').addEventListener('click', () => $('#textbookDialog').close());
 $('#textbookForm').addEventListener('submit', addTextbookWords);
 $('#startTextbookReview').addEventListener('click', startTextbookReview);
+$('#shuffleLessonReview').addEventListener('click', startShuffledLessonReview);
+$('#toggleAllLessons').addEventListener('click', toggleAllVisibleLessons);
+$('#textbookWordList').addEventListener('change', (event) => {
+  const encodedKey = event.target.dataset.lessonSelect;
+  if (!encodedKey) return;
+  const key = decodeURIComponent(encodedKey);
+  if (event.target.checked) selectedLessonKeys.add(key);
+  else selectedLessonKeys.delete(key);
+  updateLessonSelectionUI();
+});
+$('#textbookWordList').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-edit-lesson]');
+  if (!button) return;
+  openTextbookDialog(decodeURIComponent(button.dataset.editLesson));
+});
 
 let touchStartX = 0;
 $('#wordCard').addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
@@ -561,9 +511,7 @@ if ('serviceWorker' in navigator) {
   });
   navigator.serviceWorker.register('./sw.js').then((registration) => registration.update()).catch(() => {});
 }
-window.addEventListener('online', () => pullAndMergeCloud());
-document.addEventListener('visibilitychange', () => { if (!document.hidden) pullAndMergeCloud(); });
-setCloudStatus(familyId && cloudConfigured() ? 'online' : '', familyId && cloudConfigured() ? '云同步' : (cloudConfigured() ? '未连接' : '本地'));
+navigator.storage?.persist?.().catch(() => {});
 renderHome();
 renderTextbook();
-if (familyId && cloudConfigured()) pullAndMergeCloud();
+showView('textbookView');
