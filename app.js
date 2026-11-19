@@ -415,6 +415,9 @@ function renderCard() {
     : `${formatDate(word.createdAt)}认识`;
   $('#reviewProgress').textContent = `${queueIndex + 1} / ${queue.length}`;
   $('#progressBar').style.width = `${(queueIndex / queue.length) * 100}%`;
+  $('#reviewedCountDisplay').textContent = reviewedCount;
+  $('#remainingCount').textContent = queue.length - queueIndex;
+  $('#revealPrompt').textContent = '先自己读一读，再点卡片看提示';
 }
 
 function rateWord(level) {
@@ -595,6 +598,12 @@ $('#openAdd').addEventListener('click', () => {
   if ($('#textbookView').classList.contains('active')) openTextbookDialog();
   else openAddDialog();
 });
+$('#openSettings').addEventListener('click', () => {
+  refreshVoiceOptions();
+  showDialog($('#settingsDialog'));
+});
+$('#closeSettings').addEventListener('click', () => closeDialog($('#settingsDialog')));
+$('#previewVoice').addEventListener('click', previewSelectedVoice);
 $('#emptyAdd').addEventListener('click', openAddDialog);
 $('#addedTab').addEventListener('click', () => switchLibraryMode('added'));
 $('#reviewedTab').addEventListener('click', () => switchLibraryMode('reviewed'));
@@ -604,7 +613,11 @@ $('#closeAdd').addEventListener('click', () => closeDialog($('#addDialog')));
 $('#addForm').addEventListener('submit', addWords);
 $('#startReview').addEventListener('click', startReview);
 $('#exitReview').addEventListener('click', returnFromReview);
-$('#wordCard').addEventListener('click', () => $('#wordCard').classList.toggle('revealed'));
+$('#wordCard').addEventListener('click', () => {
+  const card = $('#wordCard');
+  card.classList.toggle('revealed');
+  $('#revealPrompt').textContent = card.classList.contains('revealed') ? '提示已经出现，再判断掌握程度' : '先自己读一读，再点卡片看提示';
+});
 $('#speakWord').addEventListener('click', speakCurrentWord);
 $('#voiceSelect').addEventListener('change', previewSelectedVoice);
 document.querySelectorAll('[data-rating]').forEach((button) => button.addEventListener('click', () => rateWord(Number(button.dataset.rating))));
