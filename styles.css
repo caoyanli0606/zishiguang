@@ -112,15 +112,15 @@ h1 span { color: var(--red); font-size: 17px; }
 .speak-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .speak-button span { font-size: 11px; font-weight: 700; }.speak-button.speaking svg { animation: speakerPulse .55s ease infinite alternate; }
 @keyframes speakerPulse { to { transform: scale(1.22); opacity: .55; } }
-.memory-cue { z-index: 1; display: flex; min-height: 54px; margin-top: 18px; flex-direction: column; align-items: center; gap: 4px; color: var(--red-dark); font-size: 15px; opacity: 0; transform: translateY(5px); transition: .2s; }
+.memory-cue { position: absolute; left: 30px; right: 30px; bottom: 62px; z-index: 2; display: flex; min-height: 54px; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--red-dark); font-size: 15px; opacity: 0; transform: translateY(5px); transition: .2s; }
 .memory-cue strong { font-size: 18px; letter-spacing: .06em; }
 .memory-cue span { color: var(--ink); font-size: 13px; }
 .memory-cue small { max-width: 260px; color: var(--muted); font-size: 10px; }
-.edit-current-words { z-index: 2; margin-top: 2px; padding: 4px 9px; border: 0; border-radius: 12px; background: rgba(79,117,93,.09); color: #41684f; font-size: 10px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.edit-current-words { position: absolute; bottom: 39px; z-index: 2; padding: 4px 9px; border: 0; border-radius: 12px; background: rgba(79,117,93,.09); color: #41684f; font-size: 10px; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .word-card.revealed { box-shadow: 0 25px 65px rgba(79,117,93,.18); }.word-card.revealed .memory-cue { opacity: 1; transform: none; }
 .word-card.revealed .edit-current-words { opacity: 1; pointer-events: auto; }
 .word-card.revealed .card-hint { opacity: 0; }
-.card-date { position: absolute; bottom: 35px; z-index: 1; color: #aaa095; font-size: 11px; }
+.card-date { position: absolute; bottom: 15px; z-index: 1; color: #aaa095; font-size: 11px; }
 .word-card.fly-left { transform: translateX(-130%) rotate(-10deg); opacity: 0; }.word-card.fly-right { transform: translateX(130%) rotate(10deg); opacity: 0; }
 .word-card.enter { animation: cardEnter .3s ease; }
 @keyframes cardEnter { from { transform: translateY(18px) scale(.97); opacity: 0; } }
