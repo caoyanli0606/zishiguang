@@ -500,7 +500,7 @@ function startReview() {
   renderCard();
 }
 
-function renderCard() {
+function renderCard({ preserveMode = false } = {}) {
   const word = queue[queueIndex];
   const card = $('#wordCard');
   card.className = 'word-card enter';
@@ -516,7 +516,7 @@ function renderCard() {
   $('#remainingCount').textContent = queue.length - queueIndex;
   $('#shuffleCurrentLesson').hidden = reviewScope !== 'lesson' || queue.length < 2 || reviewedCount > 0;
   $('#revealPrompt').textContent = '先自己读一读，再点卡片看提示';
-  if (queueIndex === 0) prepareReviewModes();
+  if (queueIndex === 0 && !preserveMode) prepareReviewModes();
 }
 
 function getPinyin(char) {
@@ -658,10 +658,12 @@ function shuffled(items) {
 
 function shuffleCurrentLesson() {
   if (reviewScope !== 'lesson' || queue.length < 2) return;
+  const activeMode = document.querySelector('[data-review-mode].active')?.dataset.reviewMode || 'card';
   queue = shuffled(queue);
   queueIndex = 0;
   reviewedCount = 0;
-  renderCard();
+  renderCard({ preserveMode: true });
+  switchReviewMode(activeMode);
   showToast('本课生字已打乱');
 }
 
