@@ -182,6 +182,8 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
 .sentence-editor { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
 .sentence-editor h3 { margin: 0 0 10px; font: 700 20px "STKaiti", serif; }
 .sentence-editor textarea { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+.sentence-custom-word { margin-top: 8px; }
+.sentence-custom-word[hidden] { display: none; }
 .sentence-save-button { width: 100%; min-height: 46px; margin-top: 12px; border: 1px solid rgba(79,117,93,.26); border-radius: 14px; background: rgba(79,117,93,.1); color: #41684f; font-weight: 700; cursor: pointer; }
 .saved-sentence-list { display: grid; gap: 8px; margin-top: 14px; }
 .saved-sentence-list article { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.58); }
