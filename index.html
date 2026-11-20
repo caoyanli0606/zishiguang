@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=32" />
+  <link rel="stylesheet" href="styles.css?v=33" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -82,6 +82,7 @@
         <button type="button" data-review-mode="overview">字表</button>
         <button type="button" data-review-mode="pair">拼音配对</button>
         <button type="button" data-review-mode="listen">听音找字</button>
+        <button type="button" data-review-mode="sentence">句子还原</button>
       </div>
 
       <div id="cardModePanel" class="review-mode-panel active">
@@ -95,7 +96,7 @@
             <span>听读音</span>
           </button>
           <div class="memory-cue" id="memoryCue"></div>
-          <button class="edit-current-words" id="editCurrentWords" type="button">＋ 补充组词</button>
+          <button class="edit-current-words" id="editCurrentWords" type="button">＋ 组词/造句</button>
           <span class="card-date" id="reviewDate"></span>
         </article>
       </div>
@@ -128,6 +129,18 @@
         <button id="playListenWord" class="listen-play-button" type="button">🔊 再听一次</button>
         <div id="listenChoices" class="listen-choices"></div>
         <p id="listenFeedback" class="listen-feedback">点击喇叭听读音，再选择汉字</p>
+      </section>
+
+      <section id="sentenceModePanel" class="review-mode-panel game-panel sentence-game-panel">
+        <div class="game-heading"><div><p class="eyebrow">组词造句</p><h2>把打乱的文字还原成句子</h2></div><span id="sentenceProgress">0 个句子</span></div>
+        <div id="sentenceGameEmpty" class="sentence-game-empty" hidden><span>✎</span><b>还没有可练习的句子</b><small>请先在单字卡或字表中补充组词并保存例句。</small></div>
+        <div id="sentenceGameContent">
+          <p class="sentence-target-word">本句使用词语：<strong id="sentenceTargetWord"></strong></p>
+          <div id="sentenceAnswer" class="sentence-answer" aria-label="已还原的句子"></div>
+          <div id="sentenceTiles" class="sentence-tiles" aria-label="打乱的文字"></div>
+          <div class="sentence-game-actions"><button id="resetSentenceGame" type="button">重新排列</button><button id="nextSentenceGame" type="button" hidden>下一句</button></div>
+          <p id="sentenceFeedback" class="listen-feedback">按正确顺序点击文字</p>
+        </div>
       </section>
     </section>
 
@@ -227,7 +240,7 @@
   <dialog id="wordGroupDialog">
     <form id="wordGroupForm" method="dialog">
       <div class="dialog-head">
-        <div><p class="eyebrow">我的组词</p><h2><span id="wordGroupChar">字</span> · 补充组词</h2></div>
+        <div><p class="eyebrow">组词与造句</p><h2><span id="wordGroupChar">字</span> · 学习补充</h2></div>
         <button type="button" class="close-button" id="closeWordGroup">×</button>
       </div>
       <input id="wordGroupCharInput" type="hidden" />
@@ -236,6 +249,16 @@
       <p class="field-help">可用空格、逗号或顿号分隔；留空保存即可删除手动词语。</p>
       <p class="word-group-system" id="wordGroupSystem"></p>
       <button class="primary-button" type="submit">保存组词</button>
+      <div class="sentence-editor">
+        <h3>用词语造句</h3>
+        <label for="sentenceWordInput">选择或输入词语</label>
+        <input id="sentenceWordInput" type="text" maxlength="12" list="sentenceWordOptions" placeholder="例如：春天" />
+        <datalist id="sentenceWordOptions"></datalist>
+        <label for="sentenceTextInput">输入完整句子</label>
+        <textarea id="sentenceTextInput" rows="2" maxlength="60" placeholder="例如：春天来了，花儿开了。"></textarea>
+        <button class="sentence-save-button" id="saveStudySentence" type="button">保存这个句子</button>
+        <div id="savedSentenceList" class="saved-sentence-list"></div>
+      </div>
     </form>
   </dialog>
 
@@ -243,8 +266,8 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=32"></script>
-  <script src="app.js?v=32"></script>
+  <script src="cloud-config.js?v=33"></script>
+  <script src="app.js?v=33"></script>
 </body>
 </html>
 
