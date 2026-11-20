@@ -3,6 +3,7 @@ const HISTORY_KEY = 'zishiguang-history-v1';
 const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
 const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
 const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
+const TEXTBOOK_OVERRIDES_KEY = 'zishiguang-textbook-overrides-v1';
 const VOICE_KEY = 'zishiguang-voice-v1';
 const MANUAL_WORDS_KEY = 'zishiguang-manual-words-v1';
 const OVERVIEW_PINYIN_KEY = 'zishiguang-overview-pinyin-hidden-v1';
@@ -41,10 +42,12 @@ let reviewLog = JSON.parse(localStorage.getItem(REVIEW_LOG_KEY) || '{}');
 let libraryMode = 'added';
 let libraryFilters = { added: 'all', reviewed: today() };
 let textbookWords = JSON.parse(localStorage.getItem(TEXTBOOK_KEY) || '[]');
+let textbookOverrides = JSON.parse(localStorage.getItem(TEXTBOOK_OVERRIDES_KEY) || '{}');
 let reviewContext = 'daily';
 let reviewScope = 'all';
 let selectedLessonKeys = new Set();
 let editingLessonKey = null;
+let pendingOpenLessonKey = null;
 let pairGroupIndex = 0;
 let selectedPairChar = null;
 let listenTarget = null;
@@ -113,12 +116,50 @@ async function loadRemoteTextbookCatalog() {
         });
       });
     });
-    textbookWords = [...manualWords, ...remoteWords];
+    textbookWords = applyTextbookOverrides([...manualWords, ...remoteWords]);
     saveTextbookWords();
     renderTextbook();
   } catch (error) {
     console.warn('课本字表同步失败，将继续使用本机数据。', error);
   }
+}
+
+function applyTextbookOverrides(baseWords) {
+  let result = baseWords.slice();
+  Object.entries(textbookOverrides).forEach(([sourceKey, override]) => {
+    if (!override || !Array.isArray(override.chars)) return;
+    const currentKey = override.currentKey || `${override.grade}|${override.semester}|${override.unit}`;
+    const previousEntries = textbookWords.filter((word) => {
+      const key = lessonKey(word);
+      return key === sourceKey || key === currentKey;
+    });
+    const previousByChar = new Map(previousEntries.map((word) => [word.char, word]));
+    result = result.filter((word) => {
+      const key = lessonKey(word);
+      return key !== sourceKey && key !== currentKey;
+    });
+    override.chars.forEach((char, index) => {
+      const previous = previousByChar.get(char);
+      result.push({
+        ...previous,
+        id: previous?.id || `override-${override.grade}-${override.semester}-${override.lessonOrder || 9999}-${index}-${char}`,
+        char,
+        grade: Number(override.grade),
+        semester: Number(override.semester),
+        bookUnit: override.bookUnit || previous?.bookUnit || '自定义课时',
+        unit: override.unit,
+        lessonOrder: Number(override.lessonOrder || previous?.lessonOrder || 9999),
+        charOrder: index,
+        level: previous?.level || 0,
+        reviewCount: previous?.reviewCount || 0,
+        createdAt: previous?.createdAt || today(),
+        source: 'textbook',
+        catalog: true,
+        localOverride: true
+      });
+    });
+  });
+  return result;
 }
 
 function levelText(level) {
@@ -229,6 +270,7 @@ function updateLessonSelectionUI() {
 }
 
 function renderTextbook() {
+  const openKeys = new Set([...document.querySelectorAll('#textbookWordList details[open][data-open-key]')].map((details) => details.dataset.openKey));
   const filtered = sortTextbookWords(getFilteredTextbookWords());
   $('#textbookTotal').textContent = textbookWords.length;
   $('#filteredTextbookCount').textContent = filtered.length;
@@ -248,23 +290,28 @@ function renderTextbook() {
     lessons.get(key).push(word);
   });
   $('#textbookWordList').innerHTML = [...groups.values()].map((book) => {
+    const bookKey = `${book.grade}-${book.semester}`;
+    const bookOpenKey = `book:${bookKey}`;
     const allLessons = [...book.units.values()].flatMap((lessons) => [...lessons.values()]);
     const bookCount = allLessons.reduce((sum, entries) => sum + entries.length, 0);
     const lessonCount = allLessons.length;
     const unitsHtml = [...book.units.entries()].map(([unitName, lessons]) => {
+      const unitOpenKey = `unit:${bookKey}:${unitName}`;
       const unitCount = [...lessons.values()].reduce((sum, entries) => sum + entries.length, 0);
       const lessonsHtml = [...lessons.entries()].map(([key, entries]) => {
+        const lessonOpenKey = `lesson:${key}`;
         const encodedKey = encodeURIComponent(key);
         const lessonName = entries[0].unit || '未分课时';
         const tiles = entries.map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
           <span class="level-dot"></span><b>${word.char}</b><small>${levelText(word.level)}</small>
         </button>`).join('');
-        return `<details class="lesson-card"><summary class="lesson-card-head"><div><h4>${escapeHtml(lessonName)}</h4><small>${entries.length} 个字</small></div><div class="lesson-actions"><button class="lesson-review-button" type="button" data-review-lesson="${encodedKey}">复习</button><button type="button" data-edit-lesson="${encodedKey}">编辑</button></div><span class="lesson-toggle"></span></summary><div class="lesson-select-row"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><b>选择此课时参加乱序复习</b></div><div class="word-list">${tiles}</div></details>`;
+        return `<details class="lesson-card" data-open-key="${escapeHtml(lessonOpenKey)}" ${openKeys.has(lessonOpenKey) || pendingOpenLessonKey === key ? 'open' : ''}><summary class="lesson-card-head"><div><h4>${escapeHtml(lessonName)}</h4><small>${entries.length} 个字</small></div><div class="lesson-actions"><button class="lesson-review-button" type="button" data-review-lesson="${encodedKey}">复习</button><button type="button" data-edit-lesson="${encodedKey}">编辑</button></div><span class="lesson-toggle"></span></summary><div class="lesson-select-row"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><b>选择此课时参加乱序复习</b></div><div class="word-list">${tiles}</div></details>`;
       }).join('');
-      return `<details class="textbook-unit"><summary class="textbook-unit-head"><h4>${escapeHtml(unitName)}</h4><span>${lessons.size} 个课时 · ${unitCount} 个字</span><i class="hierarchy-toggle"></i></summary><div class="textbook-unit-body">${lessonsHtml}</div></details>`;
+      return `<details class="textbook-unit" data-open-key="${escapeHtml(unitOpenKey)}" ${openKeys.has(unitOpenKey) ? 'open' : ''}><summary class="textbook-unit-head"><h4>${escapeHtml(unitName)}</h4><span>${lessons.size} 个课时 · ${unitCount} 个字</span><i class="hierarchy-toggle"></i></summary><div class="textbook-unit-body">${lessonsHtml}</div></details>`;
     }).join('');
-    return `<details class="textbook-group"><summary class="textbook-group-head"><h3>${gradeText(book.grade)}${semesterText(book.semester)}</h3><span>${book.units.size} 个单元 · ${lessonCount} 个课时 · ${bookCount} 个字</span><i class="hierarchy-toggle"></i></summary><div class="textbook-group-body">${unitsHtml}</div></details>`;
+    return `<details class="textbook-group" data-open-key="${escapeHtml(bookOpenKey)}" ${openKeys.has(bookOpenKey) ? 'open' : ''}><summary class="textbook-group-head"><h3>${gradeText(book.grade)}${semesterText(book.semester)}</h3><span>${book.units.size} 个单元 · ${lessonCount} 个课时 · ${bookCount} 个字</span><i class="hierarchy-toggle"></i></summary><div class="textbook-group-body">${unitsHtml}</div></details>`;
   }).join('');
+  pendingOpenLessonKey = null;
   updateLessonSelectionUI();
 }
 
@@ -277,7 +324,7 @@ function openTextbookDialog(key = null) {
   $('#textbookGrade').disabled = isEditing;
   $('#textbookSemester').disabled = isEditing;
   if (isEditing) {
-    const entries = textbookWords.filter((word) => lessonKey(word) === key);
+    const entries = sortTextbookWords(textbookWords.filter((word) => lessonKey(word) === key));
     if (!entries.length) return showToast('没有找到这个课时');
     const first = entries[0];
     $('#textbookGrade').value = String(first.grade);
@@ -298,37 +345,65 @@ function addTextbookWords(event) {
   const unit = $('#textbookUnit').value.trim();
   if (!unit) return showToast('请填写课时名称');
   if (editingLessonKey) {
-    const oldEntries = textbookWords.filter((word) => lessonKey(word) === editingLessonKey);
+    const oldEntries = sortTextbookWords(textbookWords.filter((word) => lessonKey(word) === editingLessonKey));
+    const first = oldEntries[0];
     const oldIds = new Set(oldEntries.map((word) => word.id));
-    const acceptedChars = chars.filter((char) => !textbookWords.some((word) => !oldIds.has(word.id) && word.grade === grade && word.semester === semester && word.char === char));
-    const acceptedSet = new Set(acceptedChars);
+    const oldByChar = new Map(oldEntries.map((word) => [word.char, word]));
+    const newKey = `${grade}|${semester}|${unit}`;
+    const lessonWasOpen = [...document.querySelectorAll('#textbookWordList details.lesson-card[open]')].some((details) => details.dataset.openKey === `lesson:${editingLessonKey}`);
     const wasSelected = selectedLessonKeys.delete(editingLessonKey);
-    textbookWords = textbookWords.filter((word) => !oldIds.has(word.id) || acceptedSet.has(word.char));
-    textbookWords.forEach((word) => { if (oldIds.has(word.id)) word.unit = unit; });
-    acceptedChars.forEach((char, index) => {
-      if (!textbookWords.some((word) => oldIds.has(word.id) && word.char === char)) {
-        textbookWords.push({ id: `tb-${Date.now()}-${index}-${char}`, char, grade, semester, unit, level: 0, reviewCount: 0, createdAt: today(), source: 'textbook' });
-      }
+    const replacement = chars.map((char, index) => {
+      const previous = oldByChar.get(char);
+      return {
+        ...previous,
+        id: previous?.id || `tb-${Date.now()}-${index}-${char}`,
+        char,
+        grade,
+        semester,
+        bookUnit: first?.bookUnit || previous?.bookUnit || '自定义课时',
+        unit,
+        lessonOrder: Number(first?.lessonOrder || previous?.lessonOrder || 9999),
+        charOrder: index,
+        level: previous?.level || 0,
+        reviewCount: previous?.reviewCount || 0,
+        createdAt: previous?.createdAt || today(),
+        source: 'textbook',
+        localOverride: true
+      };
     });
-    if (wasSelected) selectedLessonKeys.add(`${grade}|${semester}|${unit}`);
+    textbookWords = [...textbookWords.filter((word) => !oldIds.has(word.id)), ...replacement];
+    const existingOverride = Object.entries(textbookOverrides).find(([sourceKey, override]) => sourceKey === editingLessonKey || override?.currentKey === editingLessonKey);
+    const overrideSourceKey = existingOverride?.[0] || editingLessonKey;
+    if (existingOverride) delete textbookOverrides[existingOverride[0]];
+    textbookOverrides[overrideSourceKey] = {
+      currentKey: newKey,
+      grade,
+      semester,
+      bookUnit: first?.bookUnit || '自定义课时',
+      unit,
+      lessonOrder: Number(first?.lessonOrder || 9999),
+      chars
+    };
+    localStorage.setItem(TEXTBOOK_OVERRIDES_KEY, JSON.stringify(textbookOverrides));
+    if (wasSelected) selectedLessonKeys.add(newKey);
     saveTextbookWords();
+    if (lessonWasOpen) pendingOpenLessonKey = newKey;
     editingLessonKey = null;
     renderTextbook();
     closeDialog($('#textbookDialog'));
-    showToast(acceptedChars.length < chars.length ? '课时已保存，已跳过本册中的重复字' : '课时修改已保存');
+    showToast('课时已按输入顺序全量保存');
     return;
   }
-  let added = 0;
+  const existingOrders = textbookWords.filter((word) => word.grade === grade && word.semester === semester).map((word) => Number(word.lessonOrder || 0));
+  const lessonOrder = Math.max(0, ...existingOrders) + 1;
   chars.forEach((char, index) => {
-    if (textbookWords.some((word) => word.char === char && word.grade === grade && word.semester === semester)) return;
-    textbookWords.push({ id: `tb-${Date.now()}-${index}-${char}`, char, grade, semester, unit, level: 0, reviewCount: 0, createdAt: today(), source: 'textbook' });
-    added += 1;
+    textbookWords.push({ id: `tb-${Date.now()}-${index}-${char}`, char, grade, semester, bookUnit: '自定义课时', unit, lessonOrder, charOrder: index, level: 0, reviewCount: 0, createdAt: today(), source: 'textbook' });
   });
   saveTextbookWords();
   renderTextbook();
   closeDialog($('#textbookDialog'));
   $('#textbookForm').reset();
-  showToast(added ? `已录入 ${added} 个课本生字` : '这些字已在本册识字表中');
+  showToast(`已按输入顺序录入 ${chars.length} 个课本生字`);
 }
 
 function startTextbookReview() {
