@@ -6,6 +6,7 @@ const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
 const VOICE_KEY = 'zishiguang-voice-v1';
 const MANUAL_WORDS_KEY = 'zishiguang-manual-words-v1';
 const OVERVIEW_PINYIN_KEY = 'zishiguang-overview-pinyin-hidden-v1';
+const SENTENCES_KEY = 'zishiguang-study-sentences-v1';
 const WORD_FALLBACKS = {
   哥:['哥哥','大哥'],鸦:['乌鸦','鸦片'],蛙:['青蛙','牛蛙'],狗:['小狗','狼狗'],伞:['雨伞','打伞'],兔:['白兔','兔子'],爪:['爪子','鸡爪'],霜:['冰霜','霜花'],弓:['弓箭','拉弓'],吴:['吴国'],页:['页面','书页'],粽:['粽子','粽叶'],煮:['煮饭','煮熟'],蚂:['蚂蚁'],蚁:['蚂蚁','白蚁'],杨:['杨树','白杨'],袍:['长袍','棉袍'],呀:['好呀'],吗:['好吗'],吧:['走吧'],汤:['米汤','菜汤'],蚊:['蚊子','蚊虫'],啊:['好啊'],猴:['猴子','金丝猴'],掰:['掰开'],扛:['扛起','扛枪'],棵:['一棵','棵数'],咕:['咕咚','咕噜'],咚:['咕咚','叮咚'],啦:['来啦'],鹿:['小鹿','梅花鹿'],龟:['乌龟','海龟'],肚:['肚子','肚皮'],帆:['帆船','风帆'],艘:['一艘'],溪:['小溪','溪水'],榕:['榕树'],桐:['梧桐','油桐'],枫:['枫树','枫叶'],桦:['白桦','桦树'],杏:['杏花','杏子'],杉:['水杉','杉树'],蝴:['蝴蝶'],蝶:['蝴蝶','彩蝶'],壶:['水壶','茶壶'],鼻:['鼻子','鼻孔'],勺:['勺子','饭勺'],琴:['钢琴','琴声'],鹊:['喜鹊'],盯:['盯着','盯住'],朱:['朱红','朱砂'],扁:['扁担','扁平'],踩:['踩水','踩踏'],刘:['姓刘'],炒:['炒菜','炒饭'],哎:['哎呀'],哇:['好哇'],晒:['晒太阳','晾晒'],漱:['漱口'],沼:['沼泽'],闸:['水闸','闸门'],羔:['羊羔'],蝗:['蝗虫'],猬:['刺猬'],莓:['草莓'],呜:['呜咽','呜呜'],猩:['猩猩'],鸽:['鸽子','白鸽'],蚯:['蚯蚓'],蚓:['蚯蚓'],骆:['骆驼'],驼:['骆驼','驼峰'],狮:['狮子','海狮'],莺:['黄莺','夜莺'],咏:['歌咏','咏叹'],绦:['丝绦'],袄:['棉袄','夹袄'],鹃:['杜鹃'],籽:['种子','菜籽'],亭:['凉亭','亭子'],瓣:['花瓣','蒜瓣'],蔗:['甘蔗','蔗糖'],葱:['大葱','葱花'],巷:['小巷','街巷'],祭:['祭祖','祭扫'],艾:['艾草'],菊:['菊花'],菠:['菠菜','菠萝'],茄:['茄子','番茄'],炖:['炖肉','炖汤'],蘑:['蘑菇'],菇:['蘑菇','香菇'],饺:['饺子','水饺'],酱:['酱油','果酱'],茸:['毛茸茸','鹿茸'],屎:['眼屎','鸟屎'],婶:['婶婶','大婶'],陀:['陀螺'],螺:['田螺','海螺'],毽:['毽子','踢毽子'],叼:['叼走','叼着'],晌:['晌午','半晌'],棚:['大棚','车棚'],驮:['驮运','驮着'],哩:['好哩'],唉:['唉声叹气'],蹄:['马蹄','蹄子'],鹂:['黄鹂'],盏:['一盏','灯盏'],耷:['耷拉'],咦:['咦呀'],竿:['竹竿','鱼竿'],颈:['颈部','长颈鹿'],袜:['袜子','棉袜'],蜈:['蜈蚣'],蚣:['蜈蚣'],愣:['发愣','愣住'],帚:['扫帚'],桶:['水桶','木桶'],箕:['簸箕'],蔷:['蔷薇'],薇:['蔷薇'],哦:['哦呀'],
   行:['行走','步行','行动'],长:['长江','长城','长短'],只:['一只','船只'],乐:['快乐','欢乐','乐园'],得:['得到','获得'],地:['大地','土地','地方'],着:['看着','听着'],还:['还有','还是'],重:['重要','重量'],朝:['朝向','朝代'],发:['发现','出发'],好:['好人','美好'],少:['多少','很少'],数:['数学','数字'],空:['天空','空气'],更:['更加','更好'],没:['没有','没事'],几:['几个','几天'],觉:['觉得','感觉'],背:['背后','后背'],当:['当时','当天'],种:['种子','种类']
@@ -50,6 +51,9 @@ let listenTarget = null;
 let listenScore = 0;
 let manualStudyWords = JSON.parse(localStorage.getItem(MANUAL_WORDS_KEY) || '{}');
 let overviewPinyinHidden = localStorage.getItem(OVERVIEW_PINYIN_KEY) === 'true';
+let studySentences = JSON.parse(localStorage.getItem(SENTENCES_KEY) || '[]');
+let sentenceRound = null;
+let sentenceAnswer = [];
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -488,10 +492,49 @@ function openWordGroupDialog(char) {
   $('#wordGroupChar').textContent = char;
   $('#wordGroupCharInput').value = char;
   $('#wordGroupInput').value = (manualStudyWords[char] || []).join(' ');
+  $('#sentenceWordInput').value = '';
+  $('#sentenceTextInput').value = '';
   const automatic = getAutomaticStudyWords(char);
   $('#wordGroupSystem').textContent = automatic.length ? `系统推荐：${automatic.join(' · ')}` : '这个字暂时没有系统推荐词，可以手动补充。';
+  renderSentenceEditor(char);
   showDialog($('#wordGroupDialog'));
   setTimeout(() => $('#wordGroupInput').focus(), 80);
+}
+
+function renderSentenceEditor(char) {
+  const options = getStudyWords(char);
+  $('#sentenceWordOptions').innerHTML = options.map((word) => `<option value="${escapeHtml(word)}"></option>`).join('');
+  if (!$('#sentenceWordInput').value || !$('#sentenceWordInput').value.includes(char)) $('#sentenceWordInput').value = options[0] || '';
+  const sentences = studySentences.filter((item) => item.char === char);
+  $('#savedSentenceList').innerHTML = sentences.length
+    ? sentences.map((item) => `<article><div><b>${escapeHtml(item.word)}</b><p>${escapeHtml(item.text)}</p></div><button type="button" data-delete-sentence="${item.id}" aria-label="删除这个句子">删除</button></article>`).join('')
+    : '<p class="sentence-list-empty">还没有保存句子</p>';
+}
+
+function saveStudySentence() {
+  const char = $('#wordGroupCharInput').value;
+  const word = $('#sentenceWordInput').value.trim();
+  const text = $('#sentenceTextInput').value.trim();
+  if (!word || !word.includes(char)) return showToast(`词语中需要包含“${char}”`);
+  if (!text || !text.includes(word)) return showToast('句子中需要包含所选词语');
+  const normalized = normalizeSentence(text);
+  if (normalized.length < 4) return showToast('句子至少需要4个文字');
+  studySentences.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, char, word, text, createdAt: new Date().toISOString() });
+  localStorage.setItem(SENTENCES_KEY, JSON.stringify(studySentences));
+  $('#sentenceTextInput').value = '';
+  renderSentenceEditor(char);
+  showToast('例句已保存，可以进行句子还原了');
+}
+
+function deleteStudySentence(id) {
+  studySentences = studySentences.filter((item) => item.id !== id);
+  localStorage.setItem(SENTENCES_KEY, JSON.stringify(studySentences));
+  renderSentenceEditor($('#wordGroupCharInput').value);
+  showToast('例句已删除');
+}
+
+function normalizeSentence(text) {
+  return [...String(text)].filter((char) => /[\p{Script=Han}A-Za-z0-9]/u.test(char));
 }
 
 function saveManualStudyWords(event) {
@@ -555,6 +598,7 @@ function switchReviewMode(mode) {
   if (mode === 'overview') renderReviewOverview();
   if (mode === 'pair') renderPairGroup();
   if (mode === 'listen') startListenRound();
+  if (mode === 'sentence') startSentenceRound();
 }
 
 function prepareReviewModes() {
@@ -562,6 +606,8 @@ function prepareReviewModes() {
   selectedPairChar = null;
   listenTarget = null;
   listenScore = 0;
+  sentenceRound = null;
+  sentenceAnswer = [];
   $('#listenScore').textContent = '答对 0 个';
   switchReviewMode('card');
   renderReviewOverview();
@@ -570,7 +616,7 @@ function prepareReviewModes() {
 function renderReviewOverview() {
   const entries = uniqueQueueWords();
   $('#overviewCount').textContent = `${entries.length} 个字`;
-  $('#reviewOverviewGrid').innerHTML = entries.map((word) => `<article class="overview-word"><button type="button" class="overview-word-main" data-overview-char="${word.char}"><span>${getPinyin(word.char)}</span><b>${word.char}</b><small>${getStudyWords(word).map(escapeHtml).join(' · ') || '读一读'}</small></button><button type="button" class="overview-word-edit" data-edit-study-words="${word.char}" aria-label="补充${word.char}的组词">＋</button></article>`).join('');
+  $('#reviewOverviewGrid').innerHTML = entries.map((word) => `<article class="overview-word"><button type="button" class="overview-word-main" data-overview-char="${word.char}"><span>${getPinyin(word.char)}</span><b>${word.char}</b><small>${getStudyWords(word).map(escapeHtml).join(' · ') || '读一读'}</small></button><button type="button" class="overview-word-edit" data-edit-study-words="${word.char}" aria-label="补充${word.char}的组词和造句">＋</button></article>`).join('');
   applyOverviewPinyinVisibility();
 }
 
@@ -658,6 +704,83 @@ function handleListenChoice(event) {
     setTimeout(() => button.classList.remove('wrong'), 450);
     playListenTarget();
   }
+}
+
+function getQueueSentences() {
+  const chars = new Set(queue.map((word) => word.char));
+  return studySentences.filter((item) => chars.has(item.char) && normalizeSentence(item.text).length >= 4);
+}
+
+function startSentenceRound() {
+  const available = getQueueSentences();
+  $('#sentenceProgress').textContent = `${available.length} 个句子`;
+  $('#sentenceGameEmpty').hidden = available.length > 0;
+  $('#sentenceGameContent').hidden = available.length === 0;
+  if (!available.length) {
+    sentenceRound = null;
+    return;
+  }
+  const alternatives = sentenceRound && available.length > 1 ? available.filter((item) => item.id !== sentenceRound.item.id) : available;
+  const item = alternatives[Math.floor(Math.random() * alternatives.length)];
+  const targetChars = normalizeSentence(item.text);
+  let tiles = shuffled(targetChars.map((char, index) => ({ char, id: `${item.id}-${index}` })));
+  if (tiles.map((tile) => tile.char).join('') === targetChars.join('') && tiles.length > 1) tiles = [...tiles.slice(1), tiles[0]];
+  sentenceRound = { item, targetChars, tiles };
+  sentenceAnswer = [];
+  $('#sentenceTargetWord').textContent = item.word;
+  $('#sentenceTiles').innerHTML = tiles.map((tile, index) => `<button type="button" data-sentence-tile="${index}">${escapeHtml(tile.char)}</button>`).join('');
+  $('#nextSentenceGame').hidden = true;
+  $('#sentenceFeedback').textContent = '按正确顺序点击文字';
+  renderSentenceAnswer();
+}
+
+function renderSentenceAnswer() {
+  if (!sentenceRound) return;
+  $('#sentenceAnswer').innerHTML = sentenceAnswer.length
+    ? sentenceAnswer.map((entry, index) => `<button type="button" data-sentence-answer="${index}">${escapeHtml(entry.char)}</button>`).join('')
+    : '<span>从下方选择第一个字</span>';
+}
+
+function chooseSentenceTile(event) {
+  const button = event.target.closest('[data-sentence-tile]');
+  if (!button || button.disabled || !sentenceRound) return;
+  const tileIndex = Number(button.dataset.sentenceTile);
+  sentenceAnswer.push({ ...sentenceRound.tiles[tileIndex], tileIndex });
+  button.disabled = true;
+  renderSentenceAnswer();
+  if (sentenceAnswer.length !== sentenceRound.targetChars.length) return;
+  const answer = sentenceAnswer.map((entry) => entry.char).join('');
+  const target = sentenceRound.targetChars.join('');
+  if (answer === target) {
+    $('#sentenceAnswer').classList.add('correct');
+    $('#sentenceFeedback').textContent = `还原成功：${sentenceRound.item.text}`;
+    $('#nextSentenceGame').hidden = false;
+    speakGameText(sentenceRound.item.text);
+  } else {
+    $('#sentenceAnswer').classList.add('wrong');
+    $('#sentenceFeedback').textContent = '顺序还不对，再试一次';
+    setTimeout(resetSentenceRound, 700);
+  }
+}
+
+function undoSentenceTile(event) {
+  const button = event.target.closest('[data-sentence-answer]');
+  if (!button || !sentenceRound || $('#sentenceAnswer').classList.contains('correct')) return;
+  const answerIndex = Number(button.dataset.sentenceAnswer);
+  const [removed] = sentenceAnswer.splice(answerIndex, 1);
+  const tile = $(`[data-sentence-tile="${removed.tileIndex}"]`);
+  if (tile) tile.disabled = false;
+  renderSentenceAnswer();
+}
+
+function resetSentenceRound() {
+  if (!sentenceRound) return;
+  sentenceAnswer = [];
+  document.querySelectorAll('[data-sentence-tile]').forEach((button) => { button.disabled = false; });
+  $('#sentenceAnswer').classList.remove('correct', 'wrong');
+  $('#nextSentenceGame').hidden = true;
+  $('#sentenceFeedback').textContent = '按正确顺序点击文字';
+  renderSentenceAnswer();
 }
 
 function speakGameText(text) {
@@ -870,10 +993,19 @@ $('#editCurrentWords').addEventListener('click', (event) => {
 });
 $('#closeWordGroup').addEventListener('click', () => closeDialog($('#wordGroupDialog')));
 $('#wordGroupForm').addEventListener('submit', saveManualStudyWords);
+$('#saveStudySentence').addEventListener('click', saveStudySentence);
+$('#savedSentenceList').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-delete-sentence]');
+  if (button) deleteStudySentence(button.dataset.deleteSentence);
+});
 $('#pairModePanel').addEventListener('click', handlePairChoice);
 $('#nextPairGroup').addEventListener('click', nextPairGroup);
 $('#playListenWord').addEventListener('click', playListenTarget);
 $('#listenChoices').addEventListener('click', handleListenChoice);
+$('#sentenceTiles').addEventListener('click', chooseSentenceTile);
+$('#sentenceAnswer').addEventListener('click', undoSentenceTile);
+$('#resetSentenceGame').addEventListener('click', resetSentenceRound);
+$('#nextSentenceGame').addEventListener('click', startSentenceRound);
 $('#emptyAdd').addEventListener('click', openAddDialog);
 $('#addedTab').addEventListener('click', () => switchLibraryMode('added'));
 $('#reviewedTab').addEventListener('click', () => switchLibraryMode('reviewed'));
