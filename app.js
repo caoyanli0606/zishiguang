@@ -492,7 +492,8 @@ function openWordGroupDialog(char) {
   $('#wordGroupChar').textContent = char;
   $('#wordGroupCharInput').value = char;
   $('#wordGroupInput').value = (manualStudyWords[char] || []).join(' ');
-  $('#sentenceWordInput').value = '';
+  $('#sentenceCustomWordInput').value = '';
+  $('#sentenceCustomWordInput').hidden = true;
   $('#sentenceTextInput').value = '';
   const automatic = getAutomaticStudyWords(char);
   $('#wordGroupSystem').textContent = automatic.length ? `系统推荐：${automatic.join(' · ')}` : '这个字暂时没有系统推荐词，可以手动补充。';
@@ -503,8 +504,9 @@ function openWordGroupDialog(char) {
 
 function renderSentenceEditor(char) {
   const options = getStudyWords(char);
-  $('#sentenceWordOptions').innerHTML = options.map((word) => `<option value="${escapeHtml(word)}"></option>`).join('');
-  if (!$('#sentenceWordInput').value || !$('#sentenceWordInput').value.includes(char)) $('#sentenceWordInput').value = options[0] || '';
+  $('#sentenceWordSelect').innerHTML = `${options.map((word) => `<option value="${escapeHtml(word)}">${escapeHtml(word)}</option>`).join('')}<option value="__custom__">＋ 手动输入其他词语</option>`;
+  $('#sentenceWordSelect').value = options[0] || '__custom__';
+  toggleCustomSentenceWord();
   const sentences = studySentences.filter((item) => item.char === char);
   $('#savedSentenceList').innerHTML = sentences.length
     ? sentences.map((item) => `<article><div><b>${escapeHtml(item.word)}</b><p>${escapeHtml(item.text)}</p></div><button type="button" data-delete-sentence="${item.id}" aria-label="删除这个句子">删除</button></article>`).join('')
@@ -513,7 +515,7 @@ function renderSentenceEditor(char) {
 
 function saveStudySentence() {
   const char = $('#wordGroupCharInput').value;
-  const word = $('#sentenceWordInput').value.trim();
+  const word = ($('#sentenceWordSelect').value === '__custom__' ? $('#sentenceCustomWordInput').value : $('#sentenceWordSelect').value).trim();
   const text = $('#sentenceTextInput').value.trim();
   if (!word || !word.includes(char)) return showToast(`词语中需要包含“${char}”`);
   if (!text || !text.includes(word)) return showToast('句子中需要包含所选词语');
@@ -524,6 +526,12 @@ function saveStudySentence() {
   $('#sentenceTextInput').value = '';
   renderSentenceEditor(char);
   showToast('例句已保存，可以进行句子还原了');
+}
+
+function toggleCustomSentenceWord() {
+  const isCustom = $('#sentenceWordSelect').value === '__custom__';
+  $('#sentenceCustomWordInput').hidden = !isCustom;
+  if (isCustom) setTimeout(() => $('#sentenceCustomWordInput').focus(), 30);
 }
 
 function deleteStudySentence(id) {
@@ -994,6 +1002,7 @@ $('#editCurrentWords').addEventListener('click', (event) => {
 $('#closeWordGroup').addEventListener('click', () => closeDialog($('#wordGroupDialog')));
 $('#wordGroupForm').addEventListener('submit', saveManualStudyWords);
 $('#saveStudySentence').addEventListener('click', saveStudySentence);
+$('#sentenceWordSelect').addEventListener('change', toggleCustomSentenceWord);
 $('#savedSentenceList').addEventListener('click', (event) => {
   const button = event.target.closest('[data-delete-sentence]');
   if (button) deleteStudySentence(button.dataset.deleteSentence);
