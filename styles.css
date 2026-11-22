@@ -223,6 +223,24 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .textbook-group-body { padding: 0 16px 16px; }
   .textbook-unit-body { padding: 0 12px 4px; }
 }
+@media (orientation: landscape) and (min-width: 720px) {
+  .app-shell { width: min(100%, 1280px); }
+  .review-view.active { width: min(100%, 1160px); margin-left: auto; margin-right: auto; }
+  .review-top, .progress-track, .review-session-summary, .review-mode-tabs { width: 100%; }
+  #cardModePanel.active { display: grid; grid-template-columns: minmax(420px, 1.45fr) minmax(290px, .75fr); align-items: center; gap: 30px; }
+  #cardModePanel .rating-panel { margin-top: 0; }
+  .word-card { min-height: min(520px, 62vh); }
+  .game-panel { min-height: 480px; padding: 26px 30px; }
+  .review-overview-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
+  .overview-word, .overview-word-main { min-height: 92px; }
+  .pair-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .listen-choices { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sentence-answer { min-height: 96px; }
+  .sentence-tiles { min-height: 150px; }
+}
+@media (orientation: landscape) and (min-width: 1100px) {
+  .review-overview-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
 @media (orientation: landscape) and (max-height: 560px) and (min-width: 720px) {
   .app-shell { padding-top: max(14px, env(safe-area-inset-top)); }
   .topbar { margin-bottom: 14px; }
