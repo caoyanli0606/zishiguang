@@ -83,11 +83,12 @@ h1 span { color: var(--red); font-size: 17px; }
 .overview-heading-actions button { min-height: 30px; padding: 5px 9px; border: 1px solid rgba(79,117,93,.22); border-radius: 16px; background: rgba(79,117,93,.08); color: #41684f; font-size: 10px; font-weight: 700; cursor: pointer; }
 .overview-heading-actions span { padding: 6px 9px; border-radius: 20px; background: rgba(215,82,63,.08); color: var(--red-dark); font-size: 10px; font-weight: 700; }
 .review-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-.overview-word { position: relative; min-width: 0; min-height: 94px; overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.72); }
-.overview-word-main { display: grid; width: 100%; min-height: 104px; grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; padding: 10px 32px 10px 10px; border: 0; background: transparent; cursor: pointer; text-align: left; }
-.overview-word-main span { width: 100%; overflow: hidden; color: var(--red-dark); font-size: 11px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-.overview-word-main b { grid-column: 1; grid-row: 2; text-align: center; font: 700 40px/1 "STKaiti", serif; }
-.overview-word-main small { grid-column: 2; grid-row: 1 / 3; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.overview-word { position: relative; min-width: 0; min-height: 132px; overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.72); }
+.overview-word-main { display: grid; width: 100%; min-height: 132px; grid-template-columns: 72px minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: center; padding: 13px 32px 13px 8px; border: 0; background: transparent; cursor: pointer; text-align: left; }
+.overview-word-main span { width: 100%; overflow: hidden; color: var(--red-dark); font-size: 13px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.overview-word-main b { grid-column: 1; grid-row: 2; text-align: center; font: 700 48px/1 "STKaiti", serif; }
+.overview-word-main small { display: grid; grid-column: 2; grid-row: 1 / 3; align-content: center; gap: 7px; color: var(--muted); font-size: 14px; line-height: 1.25; }
+.overview-word-main small i { display: block; overflow: hidden; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
 .pinyin-hidden .overview-word-main span { display: none; }
 .pinyin-hidden .overview-word-main b { grid-row: 1 / 3; }
 .overview-word-edit { position: absolute; top: 8px; right: 7px; z-index: 2; width: 25px; height: 25px; padding: 0; border: 0; border-radius: 50%; background: rgba(79,117,93,.1); color: #41684f; font-size: 16px; cursor: pointer; }
@@ -214,10 +215,11 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .review-mode-tabs button { font-size: 10px; }
   .game-panel { min-height: 350px; padding: 16px; }
   .review-overview-grid { gap: 7px; }
-  .overview-word { min-height: 88px; border-radius: 14px; }
-  .overview-word-main { min-height: 88px; padding: 8px 30px 8px 8px; }
-  .overview-word-main span { font-size: 10px; }
-  .overview-word-main b { font-size: 35px; }
+  .overview-word { min-height: 124px; border-radius: 14px; }
+  .overview-word-main { min-height: 124px; grid-template-columns: 62px minmax(0,1fr); padding: 10px 29px 10px 5px; }
+  .overview-word-main span { font-size: 12px; }
+  .overview-word-main b { font-size: 43px; }
+  .overview-word-main small { gap: 6px; font-size: 13px; }
 }
 @media (min-width: 650px) { .app-shell { background: rgba(246,241,232,.95); box-shadow: 0 0 60px rgba(65,48,29,.1); } }
 @media (min-width: 720px) {
@@ -249,7 +251,7 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .word-card { min-height: min(520px, 62vh); }
   .game-panel { min-height: 480px; padding: 26px 30px; }
   .review-overview-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
-  .overview-word, .overview-word-main { min-height: 92px; }
+  .overview-word, .overview-word-main { min-height: 132px; }
   .big-word { font-size: 182px; }
   .pair-board { max-width: 780px; }
   .listen-choices { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -257,7 +259,7 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .sentence-tiles { min-height: 150px; }
 }
 @media (orientation: landscape) and (min-width: 1100px) {
-  .review-overview-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .review-overview-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (orientation: landscape) and (max-height: 560px) and (min-width: 720px) {
   .app-shell { padding-top: max(14px, env(safe-area-inset-top)); }
@@ -278,7 +280,7 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .game-panel { min-height: 300px; padding: 16px 20px; }
   .game-heading { margin-bottom: 11px; }
   .review-overview-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
-  .overview-word, .overview-word-main { min-height: 76px; }
+  .overview-word, .overview-word-main { min-height: 118px; }
   .pair-board { grid-template-columns: 1fr 1fr; }
   .big-word { font-size: 142px; }
   .pair-choice { height: 60px; min-height: 60px; }
