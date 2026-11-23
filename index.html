@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=44" />
+  <link rel="stylesheet" href="styles.css?v=45" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -188,12 +188,12 @@
       </div>
       <div class="textbook-summary">
         <span>全部课本共 <b id="filteredTextbookCount">0</b> 个字</span>
-        <span>已认识 <b id="knownTextbookCount">0</b> 个</span>
+        <span class="textbook-status-counts"><i>已认识 <b id="knownTextbookCount">0</b></i><i>重点 <b id="focusTextbookCount">0</b></i></span>
       </div>
       <button class="primary-button textbook-review-button" id="startTextbookReview" type="button">按顺序复习全部识字表</button>
       <div class="lesson-review-tools" id="lessonReviewTools" hidden>
         <div><b>组合课时</b><span>已选 <strong id="selectedLessonCount">0</strong> 个课时</span></div>
-        <button id="toggleAllLessons" type="button">全选</button>
+        <div class="lesson-tool-buttons"><button id="selectedStatusButton" type="button">批量状态</button><button id="toggleAllLessons" type="button">全选</button></div>
       </div>
       <button class="shuffle-review-button" id="shuffleLessonReview" type="button" hidden>乱序复习已选课时</button>
       </div>
@@ -289,12 +289,27 @@
     </form>
   </dialog>
 
+  <dialog id="textbookStatusDialog" class="status-dialog">
+    <form method="dialog">
+      <div class="dialog-head">
+        <div><p class="eyebrow">掌握状态</p><h2 id="statusDialogTitle">设置识字状态</h2></div>
+        <button type="button" class="close-button" id="closeStatusDialog">×</button>
+      </div>
+      <p id="statusScopeText" class="status-scope-text"></p>
+      <div class="status-choice-list">
+        <button type="button" data-apply-status="3"><span>✓</span><b>设为已认识</b><small>计入首页“已认识”数量</small></button>
+        <button type="button" data-apply-status="1"><span>★</span><b>标记重点复习</b><small>醒目标记，复习时重点关注</small></button>
+        <button type="button" data-apply-status="0"><span>○</span><b>设为未认识</b><small>从已认识数量中移除</small></button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=44"></script>
-  <script src="app.js?v=44"></script>
+  <script src="cloud-config.js?v=45"></script>
+  <script src="app.js?v=45"></script>
 </body>
 </html>
 
