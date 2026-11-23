@@ -12,6 +12,11 @@
   color: var(--ink);
   background: var(--paper);
 }
+.textbook-status-counts { align-items:center; }
+.textbook-status-counts i:last-of-type b { color:var(--red-dark); }
+.textbook-status-counts small { padding:3px 6px; border-radius:9px; background:rgba(79,117,93,.09); color:#41684f; font-size:9px; white-space:nowrap; }
+.textbook-status-counts small[data-mode="syncing"] { color:#9a6b18; background:rgba(240,195,91,.18); }
+.textbook-status-counts small[data-mode="pending"],.textbook-status-counts small[data-mode="offline"] { color:var(--red-dark); background:rgba(215,82,63,.09); }
 
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; overflow-x: hidden; background: radial-gradient(circle at 15% 0, #fffaf0 0, var(--paper) 38%, #eee5d8 100%); }
