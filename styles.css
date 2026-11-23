@@ -100,9 +100,9 @@ h1 span { color: var(--red); font-size: 17px; }
 .pair-char-side .pair-side-title span { color: var(--red); }
 .pair-pinyin-side .pair-side-title span { color: var(--green); }
 .pair-column { display: grid; grid-template-columns: 1fr; gap: 9px; }
-.pair-choice { min-height: 66px; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.9); font-weight: 700; cursor: pointer; box-shadow: 0 3px 10px rgba(65,48,29,.035); transition: transform .15s, border-color .15s, background .15s; }
-.pair-choice[data-kind="char"] { font: 700 40px "STKaiti", serif; }
-.pair-choice[data-kind="pinyin"] { color: #41684f; font-size: 18px; }
+.pair-choice { display: grid; width: 100%; height: 68px; min-height: 68px; place-items: center; padding: 6px 8px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.9); font-weight: 700; line-height: 1; cursor: pointer; box-shadow: 0 3px 10px rgba(65,48,29,.035); transition: transform .15s, border-color .15s, background .15s; }
+.pair-choice[data-kind="char"] { font: 700 40px/1 "STKaiti", serif; }
+.pair-choice[data-kind="pinyin"] { color: #41684f; font-size: 18px; line-height: 1; }
 .pair-choice.selected { border-color: var(--yellow); background: rgba(240,195,91,.2); transform: scale(1.025); }
 .pair-choice.matched { border-color: rgba(79,117,93,.35); background: rgba(79,117,93,.13); color: #41684f; opacity: .62; }
 .pair-choice.wrong { border-color: var(--red); background: rgba(215,82,63,.12); animation: choiceShake .25s ease; }
@@ -281,7 +281,7 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .overview-word, .overview-word-main { min-height: 76px; }
   .pair-board { grid-template-columns: 1fr 1fr; }
   .big-word { font-size: 142px; }
-  .pair-choice { min-height: 58px; }
+  .pair-choice { height: 60px; min-height: 60px; }
   .listen-play-button { margin: 0 auto 13px; }
   .listen-choices { grid-template-columns: repeat(4, 1fr); }
   .listen-choice { min-height: 82px; }
