@@ -703,7 +703,11 @@ function prepareReviewModes() {
 function renderReviewOverview() {
   const entries = uniqueQueueWords();
   $('#overviewCount').textContent = `${entries.length} 个字`;
-  $('#reviewOverviewGrid').innerHTML = entries.map((word) => `<article class="overview-word"><button type="button" class="overview-word-main" data-overview-char="${word.char}"><span>${getPinyin(word.char)}</span><b>${word.char}</b><small>${getStudyWords(word).map(escapeHtml).join(' · ') || '读一读'}</small></button><button type="button" class="overview-word-edit" data-edit-study-words="${word.char}" aria-label="补充${word.char}的组词和造句">＋</button></article>`).join('');
+  $('#reviewOverviewGrid').innerHTML = entries.map((word) => {
+    const studyWords = getStudyWords(word);
+    const wordLines = (studyWords.length ? studyWords : ['读一读']).map((item) => `<i>${escapeHtml(item)}</i>`).join('');
+    return `<article class="overview-word"><button type="button" class="overview-word-main" data-overview-char="${word.char}"><span>${getPinyin(word.char)}</span><b>${word.char}</b><small>${wordLines}</small></button><button type="button" class="overview-word-edit" data-edit-study-words="${word.char}" aria-label="补充${word.char}的组词和造句">＋</button></article>`;
+  }).join('');
   applyOverviewPinyinVisibility();
 }
 
