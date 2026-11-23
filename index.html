@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=37" />
+  <link rel="stylesheet" href="styles.css?v=38" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -119,8 +119,18 @@
 
       <section id="pairModePanel" class="review-mode-panel game-panel">
         <div class="game-heading"><div><p class="eyebrow">四字一组</p><h2>把汉字和拼音配成一对</h2></div><span id="pairProgress">第 1 组</span></div>
-        <p class="game-tip">先点一个汉字，再点它的拼音</p>
-        <div class="pair-board"><div id="pairChars" class="pair-column"></div><div id="pairPinyins" class="pair-column"></div></div>
+        <p class="game-tip">先从左边选择汉字，再到右边找到它的拼音</p>
+        <div class="pair-board">
+          <section class="pair-side pair-char-side">
+            <div class="pair-side-title"><span>①</span><b>选择汉字</b></div>
+            <div id="pairChars" class="pair-column"></div>
+          </section>
+          <section class="pair-side pair-pinyin-side">
+            <div class="pair-side-title"><span>②</span><b>匹配拼音</b></div>
+            <div id="pairPinyins" class="pair-column"></div>
+          </section>
+        </div>
+        <p id="pairFeedback" class="pair-feedback" aria-live="polite">先选择左边的汉字</p>
         <button id="nextPairGroup" class="game-next-button" type="button" hidden>下一组</button>
       </section>
 
@@ -233,6 +243,10 @@
       <label for="voiceSelect">中文音色</label>
       <select id="voiceSelect" aria-label="选择朗读音色"><option value="">正在读取音色…</option></select>
       <p class="settings-help">可选音色由当前手机、平板或电脑提供，选择会保存在这台设备。</p>
+      <label class="settings-switch" for="speakWordExample">
+        <span><b>点读时附带组词</b><small>开启后会朗读“写，写字的写”</small></span>
+        <input id="speakWordExample" type="checkbox" role="switch" />
+      </label>
       <button class="voice-preview-button" id="previewVoice" type="button">🔊 试听当前音色</button>
     </form>
   </dialog>
@@ -266,8 +280,8 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=37"></script>
-  <script src="app.js?v=37"></script>
+  <script src="cloud-config.js?v=38"></script>
+  <script src="app.js?v=38"></script>
 </body>
 </html>
 
