@@ -67,7 +67,7 @@ h1 span { color: var(--red); font-size: 17px; }
 .shuffle-current-button[hidden] { display: none; }
 .progress-pill { padding: 5px 10px; border-radius: 99px; background: rgba(215,82,63,.09); color: var(--red-dark); font-weight: 700; }.progress-track { height: 7px; overflow: hidden; margin-bottom: 16px; border-radius: 9px; background: #e4ddd1; }
 .progress-track div { height: 100%; width: 0; border-radius: inherit; background: var(--red); transition: width .35s ease; }
-.review-session-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; padding: 12px 14px; border: 1px solid rgba(215,82,63,.1); border-radius: 17px; background: linear-gradient(135deg, rgba(255,255,255,.75), rgba(240,195,91,.1)); }.review-session-summary > div:first-child { display: flex; align-items: center; gap: 9px; }.review-session-summary > div:first-child > span { font-size: 23px; }.review-session-summary p { margin: 0; font-size: 13px; font-weight: 800; }.review-session-summary p small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 400; }.session-numbers { display: grid; grid-template-columns: auto auto 1px auto auto; align-items: center; gap: 4px; }.session-numbers b { color: var(--red-dark); font-size: 16px; }.session-numbers small { color: var(--muted); font-size: 9px; }.session-numbers i { width: 1px; height: 25px; margin: 0 5px; background: var(--line); }
+.review-session-summary { display: grid; grid-template-columns: minmax(120px,1fr) auto auto; align-items: center; gap: 10px; margin-bottom: 15px; padding: 12px 14px; border: 1px solid rgba(215,82,63,.1); border-radius: 17px; background: linear-gradient(135deg, rgba(255,255,255,.75), rgba(240,195,91,.1)); }.review-session-summary > div:first-child { display: flex; align-items: center; gap: 9px; }.review-session-summary > div:first-child > span { font-size: 23px; }.review-session-summary p { margin: 0; font-size: 13px; font-weight: 800; }.review-session-summary p small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; font-weight: 400; }.review-summary-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }.session-numbers { display: grid; grid-template-columns: auto auto 1px auto auto; align-items: center; gap: 4px; }.session-numbers b { color: var(--red-dark); font-size: 16px; }.session-numbers small { color: var(--muted); font-size: 9px; }.session-numbers i { width: 1px; height: 25px; margin: 0 5px; background: var(--line); }
 .review-mode-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-bottom: 15px; padding: 5px; border-radius: 17px; background: #e9e1d5; }
 .review-mode-tabs button { min-width: 0; min-height: 42px; padding: 5px 3px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 750; cursor: pointer; }
 .review-mode-tabs button.active { background: #fffdf8; color: var(--red-dark); box-shadow: 0 4px 13px rgba(65,48,29,.1); }
@@ -185,14 +185,12 @@ label { display: block; margin: 16px 2px 7px; font-size: 13px; font-weight: 700;
 input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; border-radius: 13px; outline: 0; background: white; font-size: 16px; }textarea { resize: none; font: 28px "STKaiti", serif; }input:focus, textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(215,82,63,.1); }
 .field-help { margin: 5px 2px 0; color: var(--muted); font-size: 10px; }.dialog-head + label { margin-top: 0; }dialog .primary-button { margin-top: 22px; }
 .settings-help { margin: 9px 2px 0; color: var(--muted); font-size: 11px; line-height: 1.6; }.voice-preview-button { width: 100%; min-height: 48px; margin-top: 18px; border: 1px solid rgba(79,117,93,.24); border-radius: 14px; background: rgba(79,117,93,.08); color: #41684f; font-weight: 700; cursor: pointer; }
-.review-speech-switch { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 10px 0 14px; padding: 10px 13px; border: 1px solid rgba(79,117,93,.17); border-radius: 15px; background: rgba(79,117,93,.055); cursor: pointer; }
-.review-speech-switch span { display: flex; min-width: 0; align-items: baseline; gap: 8px; color: var(--ink); }
-.review-speech-switch b { color: #41684f; font-size: 12px; }
-.review-speech-switch small { overflow: hidden; color: var(--muted); font-size: 10px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
-.review-speech-switch input { position: relative; flex: 0 0 auto; width: 44px; height: 26px; margin: 0; padding: 0; border: 0; border-radius: 20px; background: #d8d1c7; appearance: none; cursor: pointer; transition: .2s; }
-.review-speech-switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: 0 2px 5px rgba(0,0,0,.18); transition: .2s; }
+.review-speech-switch { display: flex; min-height: 34px; align-items: center; gap: 7px; margin: 0; padding: 5px 9px; border: 1px solid rgba(79,117,93,.24); border-radius: 18px; background: rgba(79,117,93,.08); color: #41684f; cursor: pointer; white-space: nowrap; }
+.review-speech-switch span { font-size: 11px; font-weight: 700; }
+.review-speech-switch input { position: relative; flex: 0 0 auto; width: 34px; height: 20px; margin: 0; padding: 0; border: 0; border-radius: 20px; background: #d8d1c7; appearance: none; cursor: pointer; transition: .2s; }
+.review-speech-switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: white; box-shadow: 0 2px 5px rgba(0,0,0,.18); transition: .2s; }
 .review-speech-switch input:checked { background: var(--green); }
-.review-speech-switch input:checked::after { transform: translateX(18px); }
+.review-speech-switch input:checked::after { transform: translateX(14px); }
 .word-group-system { margin: 15px 2px 0; padding: 11px 12px; border-radius: 12px; background: rgba(79,117,93,.07); color: var(--muted); font-size: 11px; line-height: 1.55; }
 .sentence-editor { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
 .sentence-editor h3 { margin: 0 0 10px; font: 700 20px "STKaiti", serif; }
@@ -209,7 +207,10 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
 .toast { position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom)); z-index: 10; transform: translate(-50%, 20px); padding: 10px 17px; border-radius: 30px; background: var(--ink); color: white; font-size: 12px; opacity: 0; pointer-events: none; transition: .25s; }.toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (max-width: 360px) { .app-shell { padding-left: 15px; padding-right: 15px; }.word-card { min-height: 325px; }.big-word { font-size: 146px; }.rating-buttons { gap: 6px; } }
 @media (max-width: 390px) {
-  .review-speech-switch small { display: none; }
+  .review-session-summary { grid-template-columns: 1fr auto; }
+  .review-summary-tools { grid-column: 1 / -1; grid-row: 2; justify-content: stretch; }
+  .review-summary-tools > * { flex: 1; justify-content: center; }
+  .review-speech-switch span { font-size: 10px; }
   .review-mode-tabs button { font-size: 10px; }
   .game-panel { min-height: 350px; padding: 16px; }
   .review-overview-grid { gap: 7px; }
@@ -240,7 +241,6 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   .textbook-unit-body { padding: 0 12px 4px; }
 }
 @media (orientation: landscape) and (min-width: 720px) {
-  .review-speech-switch { max-width: 430px; margin: 10px auto 14px; }
   .app-shell { width: min(100%, 1280px); }
   .review-view.active { width: min(100%, 1160px); margin-left: auto; margin-right: auto; }
   .review-top, .progress-track, .review-session-summary, .review-mode-tabs { width: 100%; }
