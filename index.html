@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=39" />
+  <link rel="stylesheet" href="styles.css?v=40" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -68,12 +68,18 @@
     <section id="reviewView" class="view review-view" aria-live="polite">
       <div class="review-top">
         <button class="back-button" id="exitReview">← 退出</button>
-        <button class="shuffle-current-button" id="shuffleCurrentLesson" type="button" hidden>⇄ 打乱本课</button>
         <span class="progress-pill" id="reviewProgress">1 / 1</span>
       </div>
       <div class="progress-track"><div id="progressBar"></div></div>
       <div class="review-session-summary">
         <div><span>✨</span><p>本轮挑战<small>先回忆，再翻卡确认</small></p></div>
+        <div class="review-summary-tools">
+          <button class="shuffle-current-button" id="shuffleCurrentLesson" type="button" hidden>⇄ 打乱本课</button>
+          <label class="review-speech-switch" for="speakWordExample">
+            <span>点读附带组词</span>
+            <input id="speakWordExample" type="checkbox" role="switch" />
+          </label>
+        </div>
         <div class="session-numbers"><b id="reviewedCountDisplay">0</b><small>已完成</small><i></i><b id="remainingCount">0</b><small>待复习</small></div>
       </div>
 
@@ -84,11 +90,6 @@
         <button type="button" data-review-mode="listen">听音找字</button>
         <button type="button" data-review-mode="sentence">句子还原</button>
       </div>
-
-      <label class="review-speech-switch" for="speakWordExample">
-        <span><b>点读时附带组词</b><small>例如：写，写字的写</small></span>
-        <input id="speakWordExample" type="checkbox" role="switch" />
-      </label>
 
       <div id="cardModePanel" class="review-mode-panel active">
       <div id="reviewStage" class="review-stage">
@@ -281,8 +282,8 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=39"></script>
-  <script src="app.js?v=39"></script>
+  <script src="cloud-config.js?v=40"></script>
+  <script src="app.js?v=40"></script>
 </body>
 </html>
 
