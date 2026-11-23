@@ -4,6 +4,7 @@ const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
 const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
 const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
 const TEXTBOOK_OVERRIDES_KEY = 'zishiguang-textbook-overrides-v1';
+const TEXTBOOK_STATUS_DIRTY_KEY = 'zishiguang-textbook-status-dirty-v1';
 const VOICE_KEY = 'zishiguang-voice-v1';
 const SPEAK_WORD_EXAMPLE_KEY = 'zishiguang-speak-word-example-v1';
 const VOLCANO_ANIMATION_KEY = 'zishiguang-volcano-animation-v1';
@@ -63,6 +64,7 @@ let sentenceRound = null;
 let sentenceAnswer = [];
 let pendingStatusWordIds = [];
 let pendingStatusLabel = '';
+let textbookStatusSyncPromise = null;
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -80,6 +82,90 @@ function saveReviewLog() {
 
 function saveTextbookWords() {
   localStorage.setItem(TEXTBOOK_KEY, JSON.stringify(textbookWords));
+}
+
+function setStatusSyncState(text, mode = '') {
+  const element = $('#statusSyncState');
+  if (!element) return;
+  element.textContent = text;
+  element.dataset.mode = mode;
+}
+
+function textbookStatusTimestamp(word) {
+  if (word.statusUpdatedAt) return word.statusUpdatedAt;
+  if (word.lastReviewed) return `${word.lastReviewed}T12:00:00.000Z`;
+  return word.level ? `${word.createdAt || '2000-01-01'}T00:00:00.000Z` : '';
+}
+
+function localTextbookStatusSnapshot() {
+  return Object.fromEntries(textbookWords
+    .filter((word) => word.statusUpdatedAt || word.level)
+    .map((word) => [word.id, { level: Number(word.level || 0), updatedAt: textbookStatusTimestamp(word) }]));
+}
+
+function markTextbookStatusDirty() {
+  localStorage.setItem(TEXTBOOK_STATUS_DIRTY_KEY, 'true');
+  setStatusSyncState(navigator.onLine ? '等待同步' : '离线保存', navigator.onLine ? 'pending' : 'offline');
+  clearTimeout(markTextbookStatusDirty.timer);
+  markTextbookStatusDirty.timer = setTimeout(syncTextbookStatuses, 700);
+}
+
+async function syncTextbookStatuses() {
+  if (textbookStatusSyncPromise) return textbookStatusSyncPromise;
+  const config = window.CLOUD_CONFIG;
+  const progressId = config?.textbookProgressId;
+  if (!config?.url || !config?.publishableKey || !progressId) {
+    setStatusSyncState('云端未配置', 'offline');
+    return;
+  }
+  if (!navigator.onLine) {
+    setStatusSyncState('离线保存', 'offline');
+    return;
+  }
+  textbookStatusSyncPromise = (async () => {
+    setStatusSyncState('同步中…', 'syncing');
+    const headers = { apikey: config.publishableKey, 'x-family-id': progressId, 'Content-Type': 'application/json' };
+    const readUrl = `${config.url}/rest/v1/family_data?family_id=eq.${encodeURIComponent(progressId)}&select=payload`;
+    const readResponse = await fetch(readUrl, { headers, cache: 'no-store' });
+    if (!readResponse.ok) throw new Error(`status read ${readResponse.status}`);
+    const rows = await readResponse.json();
+    const remoteStatuses = rows[0]?.payload?.statuses || {};
+    const localStatuses = localTextbookStatusSnapshot();
+    const mergedStatuses = { ...remoteStatuses };
+    Object.entries(localStatuses).forEach(([id, local]) => {
+      const remote = remoteStatuses[id];
+      if (!remote || String(local.updatedAt || '') >= String(remote.updatedAt || '')) mergedStatuses[id] = local;
+    });
+    let localChanged = false;
+    textbookWords.forEach((word) => {
+      const remote = mergedStatuses[word.id];
+      if (!remote) return;
+      const localTime = textbookStatusTimestamp(word);
+      if (String(remote.updatedAt || '') > String(localTime || '')) {
+        word.level = Number(remote.level || 0);
+        word.statusUpdatedAt = remote.updatedAt;
+        localChanged = true;
+      }
+    });
+    if (localChanged) {
+      saveTextbookWords();
+      renderTextbook();
+    }
+    const writeResponse = await fetch(`${config.url}/rest/v1/family_data?on_conflict=family_id`, {
+      method: 'POST',
+      headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ family_id: progressId, payload: { version: 1, statuses: mergedStatuses } })
+    });
+    if (!writeResponse.ok) throw new Error(`status write ${writeResponse.status}`);
+    localStorage.setItem(TEXTBOOK_STATUS_DIRTY_KEY, 'false');
+    setStatusSyncState('已同步', 'synced');
+  })().catch((error) => {
+    console.warn('掌握状态同步失败，已保存在本机。', error);
+    setStatusSyncState(navigator.onLine ? '同步待重试' : '离线保存', navigator.onLine ? 'pending' : 'offline');
+  }).finally(() => {
+    textbookStatusSyncPromise = null;
+  });
+  return textbookStatusSyncPromise;
 }
 
 async function loadRemoteTextbookCatalog() {
@@ -127,6 +213,8 @@ async function loadRemoteTextbookCatalog() {
     renderTextbook();
   } catch (error) {
     console.warn('课本字表同步失败，将继续使用本机数据。', error);
+  } finally {
+    syncTextbookStatuses();
   }
 }
 
@@ -344,6 +432,7 @@ function applyTextbookStatus(level) {
   });
   if (!changed) return showToast('没有找到要修改的汉字');
   saveTextbookWords();
+  markTextbookStatusDirty();
   closeDialog($('#textbookStatusDialog'));
   renderTextbook();
   showToast(`${pendingStatusLabel}：${changed} 个字已设为${levelText(level)}`);
@@ -960,6 +1049,7 @@ function rateWord(level) {
   const next = new Date();
   next.setDate(next.getDate() + days);
   word.level = level;
+  if (isTextbook) word.statusUpdatedAt = new Date().toISOString();
   word.reviewCount = (word.reviewCount || 0) + 1;
   word.lastReviewed = today();
   if (!isTextbook) word.nextReview = next.toLocaleDateString('sv-SE');
@@ -970,7 +1060,10 @@ function rateWord(level) {
   if (existingEntry) Object.assign(existingEntry, logEntry);
   else entries.push(logEntry);
   saveReviewLog();
-  if (isTextbook) saveTextbookWords();
+  if (isTextbook) {
+    saveTextbookWords();
+    markTextbookStatusDirty();
+  }
   else saveWords();
   reviewedCount += 1;
 
@@ -1274,6 +1367,8 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').then((registration) => registration.update()).catch(() => {});
 }
 navigator.storage?.persist?.().catch(() => {});
+window.addEventListener('online', syncTextbookStatuses);
+window.addEventListener('offline', () => setStatusSyncState('离线保存', 'offline'));
 renderHome();
 renderTextbook();
 showView('textbookView');
