@@ -5,6 +5,7 @@ const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
 const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
 const TEXTBOOK_OVERRIDES_KEY = 'zishiguang-textbook-overrides-v1';
 const VOICE_KEY = 'zishiguang-voice-v1';
+const SPEAK_WORD_EXAMPLE_KEY = 'zishiguang-speak-word-example-v1';
 const MANUAL_WORDS_KEY = 'zishiguang-manual-words-v1';
 const OVERVIEW_PINYIN_KEY = 'zishiguang-overview-pinyin-hidden-v1';
 const SENTENCES_KEY = 'zishiguang-study-sentences-v1';
@@ -55,6 +56,7 @@ let listenScore = 0;
 let manualStudyWords = JSON.parse(localStorage.getItem(MANUAL_WORDS_KEY) || '{}');
 let overviewPinyinHidden = localStorage.getItem(OVERVIEW_PINYIN_KEY) === 'true';
 let studySentences = JSON.parse(localStorage.getItem(SENTENCES_KEY) || '[]');
+let speakWordExample = localStorage.getItem(SPEAK_WORD_EXAMPLE_KEY) === 'true';
 let sentenceRound = null;
 let sentenceAnswer = [];
 
@@ -725,6 +727,7 @@ function renderPairGroup() {
   selectedPairChar = null;
   $('#pairProgress').textContent = `第 ${pairGroupIndex + 1} / ${totalGroups} 组`;
   $('#nextPairGroup').hidden = true;
+  $('#pairFeedback').textContent = '先选择左边的汉字';
   $('#pairChars').innerHTML = shuffled(group).map((word, index) => `<button type="button" class="pair-choice" data-kind="char" data-pair-char="${word.char}" data-pair-id="c-${pairGroupIndex}-${index}">${word.char}</button>`).join('');
   $('#pairPinyins').innerHTML = shuffled(group).map((word, index) => `<button type="button" class="pair-choice" data-kind="pinyin" data-pair-pinyin="${getPinyin(word.char)}" data-pair-id="p-${pairGroupIndex}-${index}">${getPinyin(word.char)}</button>`).join('');
 }
@@ -736,6 +739,7 @@ function handlePairChoice(event) {
     document.querySelectorAll('[data-pair-char].selected').forEach((button) => button.classList.remove('selected'));
     selectedPairChar = charButton;
     charButton.classList.add('selected');
+    $('#pairFeedback').textContent = `已选择“${charButton.dataset.pairChar}”，请找出它的拼音`;
     return;
   }
   if (!pinyinButton || !selectedPairChar || pinyinButton.classList.contains('matched')) return;
@@ -746,8 +750,11 @@ function handlePairChoice(event) {
     pinyinButton.classList.add('matched');
     speakGameText(selectedPairChar.dataset.pairChar);
     selectedPairChar = null;
-    if ([...document.querySelectorAll('[data-pair-char]')].every((button) => button.classList.contains('matched'))) $('#nextPairGroup').hidden = false;
+    const completed = [...document.querySelectorAll('[data-pair-char]')].every((button) => button.classList.contains('matched'));
+    $('#pairFeedback').textContent = completed ? '太棒了，这一组全部配对成功！' : '配对正确，继续选择下一个汉字';
+    if (completed) $('#nextPairGroup').hidden = false;
   } else {
+    $('#pairFeedback').textContent = '这个拼音还不对，再仔细看看';
     pinyinButton.classList.add('wrong');
     setTimeout(() => pinyinButton.classList.remove('wrong'), 420);
   }
@@ -938,7 +945,7 @@ function speakCurrentWord(event) {
   const char = $('#reviewWord').textContent;
   if (!('speechSynthesis' in window)) return showToast('当前浏览器不支持语音朗读');
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(char);
+  const utterance = new SpeechSynthesisUtterance(getStudySpeechText(char));
   utterance.lang = 'zh-CN';
   utterance.rate = 0.72;
   utterance.pitch = 1;
@@ -947,6 +954,15 @@ function speakCurrentWord(event) {
   utterance.onstart = () => button.classList.add('speaking');
   utterance.onend = utterance.onerror = () => button.classList.remove('speaking');
   window.speechSynthesis.speak(utterance);
+}
+
+function getStudySpeechText(char) {
+  const example = getStudyWords(char)[0];
+  return speakWordExample && example ? `${char}，${example}的${char}` : char;
+}
+
+function speakStudyChar(char) {
+  speakGameText(getStudySpeechText(char));
 }
 
 function speakFeedback(message) {
@@ -1003,7 +1019,7 @@ function previewSelectedVoice() {
   if (!select?.value || !('speechSynthesis' in window)) return;
   localStorage.setItem(VOICE_KEY, select.value);
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance('你好，我来陪圈圈认字');
+  const utterance = new SpeechSynthesisUtterance(speakWordExample ? '写，写字的写' : '你好，我来陪圈圈认字');
   utterance.lang = 'zh-CN';
   utterance.rate = 0.82;
   utterance.pitch = 1.04;
@@ -1060,16 +1076,21 @@ $('#openAdd').addEventListener('click', () => {
 });
 $('#openSettings').addEventListener('click', () => {
   refreshVoiceOptions();
+  $('#speakWordExample').checked = speakWordExample;
   showDialog($('#settingsDialog'));
 });
 $('#closeSettings').addEventListener('click', () => closeDialog($('#settingsDialog')));
 $('#previewVoice').addEventListener('click', previewSelectedVoice);
+$('#speakWordExample').addEventListener('change', (event) => {
+  speakWordExample = event.target.checked;
+  localStorage.setItem(SPEAK_WORD_EXAMPLE_KEY, String(speakWordExample));
+});
 document.querySelectorAll('[data-review-mode]').forEach((button) => button.addEventListener('click', () => switchReviewMode(button.dataset.reviewMode)));
 $('#reviewOverviewGrid').addEventListener('click', (event) => {
   const editButton = event.target.closest('[data-edit-study-words]');
   if (editButton) return openWordGroupDialog(editButton.dataset.editStudyWords);
   const button = event.target.closest('[data-overview-char]');
-  if (button) speakGameText(button.dataset.overviewChar);
+  if (button) speakStudyChar(button.dataset.overviewChar);
 });
 $('#toggleOverviewPinyin').addEventListener('click', toggleOverviewPinyin);
 $('#editCurrentWords').addEventListener('click', (event) => {
