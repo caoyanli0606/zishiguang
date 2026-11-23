@@ -2,5 +2,7 @@
 // Publishable key 可以安全地用于网页；不要在这里填写 secret/service_role key。
 window.CLOUD_CONFIG = {
   url: 'https://qzddjudxsgmkssdayhlu.supabase.co',
-  publishableKey: 'sb_publishable_3jp85sBXPl37Uze3zsrv2g_s6VgyqDI'
+  publishableKey: 'sb_publishable_3jp85sBXPl37Uze3zsrv2g_s6VgyqDI',
+  textbookProgressId: 'progress-4c817d69a1e84bd9b23ff670cf93d6ad'
 };
+
