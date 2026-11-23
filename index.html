@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=42" />
+  <link rel="stylesheet" href="styles.css?v=43" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -124,7 +124,7 @@
       </section>
 
       <section id="pairModePanel" class="review-mode-panel game-panel">
-        <div class="game-heading"><div><p class="eyebrow">四字一组</p><h2>把汉字和拼音配成一对</h2></div><span id="pairProgress">第 1 组</span></div>
+        <div class="game-heading"><div><p class="eyebrow">四字一组</p><h2>把汉字和拼音配成一对</h2></div><div class="pair-heading-tools"><label class="volcano-switch" for="enableVolcanoAnimation"><span>🌋 火山动画</span><input id="enableVolcanoAnimation" type="checkbox" role="switch" /></label><span id="pairProgress">第 1 组</span></div></div>
         <p class="game-tip">先从左边选择汉字，再到右边找到它的拼音</p>
         <div class="pair-board">
           <section class="pair-side pair-char-side">
@@ -138,6 +138,17 @@
         </div>
         <p id="pairFeedback" class="pair-feedback" aria-live="polite">先选择左边的汉字</p>
         <button id="nextPairGroup" class="game-next-button" type="button" hidden>下一组</button>
+        <div id="volcanoCelebration" class="volcano-celebration" aria-hidden="true">
+          <div class="volcano-sky">
+            <div class="volcano-glow"></div>
+            <div class="smoke-cloud smoke-one"></div><div class="smoke-cloud smoke-two"></div><div class="smoke-cloud smoke-three"></div>
+            <div class="lava-burst lava-burst-one"></div><div class="lava-burst lava-burst-two"></div><div class="lava-burst lava-burst-three"></div>
+            <div class="volcano-mountain"><div class="volcano-crater"></div><div class="lava-river"></div></div>
+            <i class="eruption-rock rock-one"></i><i class="eruption-rock rock-two"></i><i class="eruption-rock rock-three"></i><i class="eruption-rock rock-four"></i>
+            <div class="volcano-ground"></div>
+          </div>
+          <div class="volcano-message"><b>🌋 配对成功！</b><span>火山能量大爆发</span></div>
+        </div>
       </section>
 
       <section id="listenModePanel" class="review-mode-panel game-panel">
@@ -282,8 +293,8 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=42"></script>
-  <script src="app.js?v=42"></script>
+  <script src="cloud-config.js?v=43"></script>
+  <script src="app.js?v=43"></script>
 </body>
 </html>
 
