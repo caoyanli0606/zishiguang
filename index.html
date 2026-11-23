@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=38" />
+  <link rel="stylesheet" href="styles.css?v=39" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -84,6 +84,11 @@
         <button type="button" data-review-mode="listen">听音找字</button>
         <button type="button" data-review-mode="sentence">句子还原</button>
       </div>
+
+      <label class="review-speech-switch" for="speakWordExample">
+        <span><b>点读时附带组词</b><small>例如：写，写字的写</small></span>
+        <input id="speakWordExample" type="checkbox" role="switch" />
+      </label>
 
       <div id="cardModePanel" class="review-mode-panel active">
       <div id="reviewStage" class="review-stage">
@@ -243,10 +248,6 @@
       <label for="voiceSelect">中文音色</label>
       <select id="voiceSelect" aria-label="选择朗读音色"><option value="">正在读取音色…</option></select>
       <p class="settings-help">可选音色由当前手机、平板或电脑提供，选择会保存在这台设备。</p>
-      <label class="settings-switch" for="speakWordExample">
-        <span><b>点读时附带组词</b><small>开启后会朗读“写，写字的写”</small></span>
-        <input id="speakWordExample" type="checkbox" role="switch" />
-      </label>
       <button class="voice-preview-button" id="previewVoice" type="button">🔊 试听当前音色</button>
     </form>
   </dialog>
@@ -280,8 +281,8 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=38"></script>
-  <script src="app.js?v=38"></script>
+  <script src="cloud-config.js?v=39"></script>
+  <script src="app.js?v=39"></script>
 </body>
 </html>
 
