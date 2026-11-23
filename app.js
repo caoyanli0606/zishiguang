@@ -1076,11 +1076,11 @@ $('#openAdd').addEventListener('click', () => {
 });
 $('#openSettings').addEventListener('click', () => {
   refreshVoiceOptions();
-  $('#speakWordExample').checked = speakWordExample;
   showDialog($('#settingsDialog'));
 });
 $('#closeSettings').addEventListener('click', () => closeDialog($('#settingsDialog')));
 $('#previewVoice').addEventListener('click', previewSelectedVoice);
+$('#speakWordExample').checked = speakWordExample;
 $('#speakWordExample').addEventListener('change', (event) => {
   speakWordExample = event.target.checked;
   localStorage.setItem(SPEAK_WORD_EXAMPLE_KEY, String(speakWordExample));
