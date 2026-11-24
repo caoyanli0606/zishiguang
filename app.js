@@ -12,6 +12,12 @@ const MANUAL_WORDS_KEY = 'zishiguang-manual-words-v1';
 const OVERVIEW_PINYIN_KEY = 'zishiguang-overview-pinyin-hidden-v1';
 const SENTENCES_KEY = 'zishiguang-study-sentences-v1';
 const STUDY_CONTENT_META_KEY = 'zishiguang-study-content-meta-v1';
+const FEEDBACK_AUDIO_FILES = {
+  'Bingo': './assets/voice-pack/bingo.mp3',
+  '圈圈，你真是太棒了': './assets/voice-pack/known.mp3',
+  '很好，圈圈，下次就认识了': './assets/voice-pack/familiar.mp3',
+  '圈圈，你要加油哦，我相信你': './assets/voice-pack/again.mp3'
+};
 const WORD_FALLBACKS = {
   哥:['哥哥','大哥'],鸦:['乌鸦','鸦片'],蛙:['青蛙','牛蛙'],狗:['小狗','狼狗'],伞:['雨伞','打伞'],兔:['白兔','兔子'],爪:['爪子','鸡爪'],霜:['冰霜','霜花'],弓:['弓箭','拉弓'],吴:['吴国'],页:['页面','书页'],粽:['粽子','粽叶'],煮:['煮饭','煮熟'],蚂:['蚂蚁'],蚁:['蚂蚁','白蚁'],杨:['杨树','白杨'],袍:['长袍','棉袍'],呀:['好呀'],吗:['好吗'],吧:['走吧'],汤:['米汤','菜汤'],蚊:['蚊子','蚊虫'],啊:['好啊'],猴:['猴子','金丝猴'],掰:['掰开'],扛:['扛起','扛枪'],棵:['一棵','棵数'],咕:['咕咚','咕噜'],咚:['咕咚','叮咚'],啦:['来啦'],鹿:['小鹿','梅花鹿'],龟:['乌龟','海龟'],肚:['肚子','肚皮'],帆:['帆船','风帆'],艘:['一艘'],溪:['小溪','溪水'],榕:['榕树'],桐:['梧桐','油桐'],枫:['枫树','枫叶'],桦:['白桦','桦树'],杏:['杏花','杏子'],杉:['水杉','杉树'],蝴:['蝴蝶'],蝶:['蝴蝶','彩蝶'],壶:['水壶','茶壶'],鼻:['鼻子','鼻孔'],勺:['勺子','饭勺'],琴:['钢琴','琴声'],鹊:['喜鹊'],盯:['盯着','盯住'],朱:['朱红','朱砂'],扁:['扁担','扁平'],踩:['踩水','踩踏'],刘:['姓刘'],炒:['炒菜','炒饭'],哎:['哎呀'],哇:['好哇'],晒:['晒太阳','晾晒'],漱:['漱口'],沼:['沼泽'],闸:['水闸','闸门'],羔:['羊羔'],蝗:['蝗虫'],猬:['刺猬'],莓:['草莓'],呜:['呜咽','呜呜'],猩:['猩猩'],鸽:['鸽子','白鸽'],蚯:['蚯蚓'],蚓:['蚯蚓'],骆:['骆驼'],驼:['骆驼','驼峰'],狮:['狮子','海狮'],莺:['黄莺','夜莺'],咏:['歌咏','咏叹'],绦:['丝绦'],袄:['棉袄','夹袄'],鹃:['杜鹃'],籽:['种子','菜籽'],亭:['凉亭','亭子'],瓣:['花瓣','蒜瓣'],蔗:['甘蔗','蔗糖'],葱:['大葱','葱花'],巷:['小巷','街巷'],祭:['祭祖','祭扫'],艾:['艾草'],菊:['菊花'],菠:['菠菜','菠萝'],茄:['茄子','番茄'],炖:['炖肉','炖汤'],蘑:['蘑菇'],菇:['蘑菇','香菇'],饺:['饺子','水饺'],酱:['酱油','果酱'],茸:['毛茸茸','鹿茸'],屎:['眼屎','鸟屎'],婶:['婶婶','大婶'],陀:['陀螺'],螺:['田螺','海螺'],毽:['毽子','踢毽子'],叼:['叼走','叼着'],晌:['晌午','半晌'],棚:['大棚','车棚'],驮:['驮运','驮着'],哩:['好哩'],唉:['唉声叹气'],蹄:['马蹄','蹄子'],鹂:['黄鹂'],盏:['一盏','灯盏'],耷:['耷拉'],咦:['咦呀'],竿:['竹竿','鱼竿'],颈:['颈部','长颈鹿'],袜:['袜子','棉袜'],蜈:['蜈蚣'],蚣:['蜈蚣'],愣:['发愣','愣住'],帚:['扫帚'],桶:['水桶','木桶'],箕:['簸箕'],蔷:['蔷薇'],薇:['蔷薇'],哦:['哦呀'],
   行:['行走','步行','行动'],长:['长江','长城','长短'],只:['一只','船只'],乐:['快乐','欢乐','乐园'],得:['得到','获得'],地:['大地','土地','地方'],着:['看着','听着'],还:['还有','还是'],重:['重要','重量'],朝:['朝向','朝代'],发:['发现','出发'],好:['好人','美好'],少:['多少','很少'],数:['数学','数字'],空:['天空','空气'],更:['更加','更好'],没:['没有','没事'],几:['几个','几天'],觉:['觉得','感觉'],背:['背后','后背'],当:['当时','当天'],种:['种子','种类']
@@ -70,6 +76,7 @@ let pendingStatusWordIds = [];
 let pendingStatusLabel = '';
 let textbookStatusSyncPromise = null;
 let studySyncRevision = 0;
+let activeFeedbackAudio = null;
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -1100,6 +1107,7 @@ function resetSentenceRound() {
 
 function speakGameText(text) {
   if (!('speechSynthesis' in window)) return;
+  stopFeedbackAudio();
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'zh-CN';
@@ -1170,6 +1178,7 @@ function showToast(message) {
 function speakCurrentWord() {
   const char = $('#reviewWord').textContent;
   if (!('speechSynthesis' in window)) return showToast('当前浏览器不支持语音朗读');
+  stopFeedbackAudio();
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(getStudySpeechText(char));
   utterance.lang = 'zh-CN';
@@ -1194,6 +1203,28 @@ function speakStudyChar(char) {
 }
 
 function speakFeedback(message) {
+  window.speechSynthesis?.cancel();
+  stopFeedbackAudio();
+  const source = FEEDBACK_AUDIO_FILES[message];
+  if (source) {
+    const audio = new Audio(source);
+    activeFeedbackAudio = audio;
+    audio.preload = 'auto';
+    audio.addEventListener('ended', () => { if (activeFeedbackAudio === audio) activeFeedbackAudio = null; }, { once: true });
+    audio.play().catch(() => speakFeedbackWithSystem(message));
+    return;
+  }
+  speakFeedbackWithSystem(message);
+}
+
+function stopFeedbackAudio() {
+  if (!activeFeedbackAudio) return;
+  activeFeedbackAudio.pause();
+  activeFeedbackAudio.currentTime = 0;
+  activeFeedbackAudio = null;
+}
+
+function speakFeedbackWithSystem(message) {
   if (!('speechSynthesis' in window)) return;
   const utterance = new SpeechSynthesisUtterance(message);
   utterance.lang = 'zh-CN';
