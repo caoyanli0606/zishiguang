@@ -1,5 +1,5 @@
-const CACHE = 'zishiguang-v54';
-const FILES = ['./', './index.html', './styles.css?v=54', './cloud-config.js?v=54', './app.js?v=54', './manifest.webmanifest', './assets/pug-runner.png', './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
+const CACHE = 'zishiguang-v55';
+const FILES = ['./', './index.html', './styles.css?v=55', './cloud-config.js?v=55', './app.js?v=55', './manifest.webmanifest', './assets/pug-runner.png', './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
@@ -21,13 +21,16 @@ self.addEventListener('fetch', (event) => {
   const mustBeFresh = event.request.mode === 'navigate'
     || url.pathname.endsWith('/index.html')
     || url.pathname.endsWith('/styles.css')
-    || url.pathname.endsWith('/app.js');
+    || url.pathname.endsWith('/app.js')
+    || url.pathname.includes('/assets/generated-tts/');
   if (mustBeFresh) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+          }
           return response;
         })
         .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))

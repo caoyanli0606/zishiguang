@@ -80,6 +80,7 @@ let activeFeedbackAudio = null;
 let neuralAudioContext = null;
 let activeNeuralSource = null;
 let neuralSpeechRequest = 0;
+const announcedTtsQueue = new Set();
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -1133,24 +1134,27 @@ async function getNeuralAudio(text) {
   const config = window.CLOUD_CONFIG || {};
   if (!config.url || !config.publishableKey || !config.textbookProgressId) throw new Error('语音云端尚未配置');
   const key = await neuralCacheKey(text);
-  const cache = 'caches' in window ? await caches.open('zishiguang-neural-voice-v1') : null;
-  const cacheRequest = new Request(`${location.origin}${location.pathname.replace(/[^/]*$/, '')}tts-cache/${key}.mp3`);
-  const cached = await cache?.match(cacheRequest);
-  if (cached) return cached.arrayBuffer();
+  const audioResponse = await fetch(`./assets/generated-tts/${key}.mp3`, { cache: 'no-store' });
+  if (audioResponse.ok) return audioResponse.arrayBuffer();
+  if (audioResponse.status !== 404) throw new Error(`男孩语音读取失败：${audioResponse.status}`);
 
-  const response = await fetch(`${config.url}/functions/v1/tts`, {
+  const queueResponse = await fetch(`${config.url}/rest/v1/tts_queue?on_conflict=id`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       apikey: config.publishableKey,
       Authorization: `Bearer ${config.publishableKey}`,
       'x-family-id': config.textbookProgressId,
+      Prefer: 'resolution=ignore-duplicates,return=minimal',
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ id: key, family_id: config.textbookProgressId, text, status: 'pending' }),
   });
-  if (!response.ok) throw new Error(`男孩语音生成失败：${response.status}`);
-  await cache?.put(cacheRequest, response.clone());
-  return response.arrayBuffer();
+  if (!queueResponse.ok && queueResponse.status !== 409) throw new Error(`男孩语音排队失败：${queueResponse.status}`);
+  if (!announcedTtsQueue.has(key)) {
+    announcedTtsQueue.add(key);
+    showToast('男孩语音正在生成，首次暂用系统读音');
+  }
+  throw new Error('男孩语音已加入生成队列');
 }
 
 function stopNeuralAudio() {
