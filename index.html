@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=49" />
+  <link rel="stylesheet" href="styles.css?v=50" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -93,14 +93,10 @@
 
       <div id="cardModePanel" class="review-mode-panel active">
       <div id="reviewStage" class="review-stage">
-        <article id="wordCard" class="word-card" tabindex="0" role="button" aria-label="点击显示提示">
+        <article id="wordCard" class="word-card" tabindex="0" role="button" aria-label="点击卡片朗读并显示提示">
           <span class="card-seal">认</span>
-          <span class="card-hint" id="revealPrompt">先自己读一读，再点卡片看提示</span>
+          <span class="card-hint" id="revealPrompt">先自己读一读，再点卡片听读音和看提示</span>
           <div class="big-word" id="reviewWord">字</div>
-          <button class="speak-button" id="speakWord" type="button" aria-label="朗读这个字">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l4.5 4V5.5l-4.5 4H4Zm11.3-.9a5 5 0 0 1 0 6.8M17.8 6a8.5 8.5 0 0 1 0 12" /></svg>
-            <span>听读音</span>
-          </button>
           <div class="memory-cue" id="memoryCue"></div>
           <button class="edit-current-words" id="editCurrentWords" type="button">＋ 组词/造句</button>
           <span class="card-date" id="reviewDate"></span>
@@ -310,7 +306,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=49"></script>
-  <script src="app.js?v=49"></script>
+  <script src="cloud-config.js?v=50"></script>
+  <script src="app.js?v=50"></script>
 </body>
 </html>

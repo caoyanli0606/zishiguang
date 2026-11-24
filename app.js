@@ -709,7 +709,7 @@ function renderCard({ preserveMode = false } = {}) {
   $('#reviewedCountDisplay').textContent = reviewedCount;
   $('#remainingCount').textContent = queue.length - queueIndex;
   $('#shuffleCurrentLesson').hidden = reviewScope !== 'lesson' || queue.length < 2 || reviewedCount > 0;
-  $('#revealPrompt').textContent = '先自己读一读，再点卡片看提示';
+  $('#revealPrompt').textContent = '先自己读一读，再点卡片听读音和看提示';
   if (queueIndex === 0 && !preserveMode) prepareReviewModes();
 }
 
@@ -1167,8 +1167,7 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.remove('show'), 1800);
 }
 
-function speakCurrentWord(event) {
-  event.stopPropagation();
+function speakCurrentWord() {
   const char = $('#reviewWord').textContent;
   if (!('speechSynthesis' in window)) return showToast('当前浏览器不支持语音朗读');
   window.speechSynthesis.cancel();
@@ -1177,9 +1176,9 @@ function speakCurrentWord(event) {
   utterance.rate = 0.72;
   utterance.pitch = 1;
   applySelectedVoice(utterance);
-  const button = $('#speakWord');
-  utterance.onstart = () => button.classList.add('speaking');
-  utterance.onend = utterance.onerror = () => button.classList.remove('speaking');
+  const card = $('#wordCard');
+  utterance.onstart = () => card.classList.add('speaking');
+  utterance.onend = utterance.onerror = () => card.classList.remove('speaking');
   window.speechSynthesis.speak(utterance);
 }
 
@@ -1363,12 +1362,18 @@ $('#startReview').addEventListener('click', startReview);
 $('#exitReview').addEventListener('click', returnFromReview);
 $('#shuffleCurrentLesson').addEventListener('click', shuffleCurrentLesson);
 $('#nextCard').addEventListener('click', showNextCard);
-$('#wordCard').addEventListener('click', () => {
+$('#wordCard').addEventListener('click', (event) => {
+  if (event.target.closest('button')) return;
   const card = $('#wordCard');
   card.classList.toggle('revealed');
-  $('#revealPrompt').textContent = card.classList.contains('revealed') ? '提示已经出现，再判断掌握程度' : '先自己读一读，再点卡片看提示';
+  $('#revealPrompt').textContent = card.classList.contains('revealed') ? '提示已经出现，点卡片可再次听读音' : '先自己读一读，再点卡片听读音和看提示';
+  speakCurrentWord();
 });
-$('#speakWord').addEventListener('click', speakCurrentWord);
+$('#wordCard').addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  event.currentTarget.click();
+});
 $('#voiceSelect').addEventListener('change', previewSelectedVoice);
 document.querySelectorAll('[data-rating]').forEach((button) => button.addEventListener('click', () => rateWord(Number(button.dataset.rating))));
 $('#backHome').addEventListener('click', returnFromReview);

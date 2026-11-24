@@ -184,6 +184,9 @@ h1 span { color: var(--red); font-size: 17px; }
 .sentence-game-empty small { max-width: 250px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .review-stage { perspective: 900px; }
 .word-card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 370px; overflow: hidden; border: 1px solid rgba(215,82,63,.12); border-radius: 34px; background: linear-gradient(155deg, #fffefb 0%, #fff9ef 58%, #f8ede0 100%); box-shadow: 0 22px 55px rgba(104,70,36,.14); cursor: pointer; user-select: none; transition: transform .22s ease, opacity .22s ease, box-shadow .25s ease; }
+.word-card.speaking { box-shadow: 0 0 0 4px rgba(215,82,63,.12), 0 24px 60px rgba(104,70,36,.18); }
+.word-card.speaking::after { animation: card-speaking-pulse .7s ease-in-out infinite alternate; }
+@keyframes card-speaking-pulse { to { transform: scale(1.08); background: rgba(215,82,63,.085); } }
 .word-card::before { content: ""; position: absolute; inset: 20px; border: 1px solid rgba(215,82,63,.12); border-radius: 22px; }
 .word-card::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; background: rgba(215,82,63,.045); }
 .card-seal { position: absolute; top: 22px; right: 23px; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid rgba(215,82,63,.25); border-radius: 10px; color: var(--red); font: 20px "STKaiti", serif; transform: rotate(5deg); }.card-hint { position: absolute; top: 36px; z-index: 1; color: #9f9588; font-size: 11px; }
