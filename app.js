@@ -11,6 +11,7 @@ const VOLCANO_ANIMATION_KEY = 'zishiguang-volcano-animation-v1';
 const MANUAL_WORDS_KEY = 'zishiguang-manual-words-v1';
 const OVERVIEW_PINYIN_KEY = 'zishiguang-overview-pinyin-hidden-v1';
 const SENTENCES_KEY = 'zishiguang-study-sentences-v1';
+const STUDY_CONTENT_META_KEY = 'zishiguang-study-content-meta-v1';
 const WORD_FALLBACKS = {
   哥:['哥哥','大哥'],鸦:['乌鸦','鸦片'],蛙:['青蛙','牛蛙'],狗:['小狗','狼狗'],伞:['雨伞','打伞'],兔:['白兔','兔子'],爪:['爪子','鸡爪'],霜:['冰霜','霜花'],弓:['弓箭','拉弓'],吴:['吴国'],页:['页面','书页'],粽:['粽子','粽叶'],煮:['煮饭','煮熟'],蚂:['蚂蚁'],蚁:['蚂蚁','白蚁'],杨:['杨树','白杨'],袍:['长袍','棉袍'],呀:['好呀'],吗:['好吗'],吧:['走吧'],汤:['米汤','菜汤'],蚊:['蚊子','蚊虫'],啊:['好啊'],猴:['猴子','金丝猴'],掰:['掰开'],扛:['扛起','扛枪'],棵:['一棵','棵数'],咕:['咕咚','咕噜'],咚:['咕咚','叮咚'],啦:['来啦'],鹿:['小鹿','梅花鹿'],龟:['乌龟','海龟'],肚:['肚子','肚皮'],帆:['帆船','风帆'],艘:['一艘'],溪:['小溪','溪水'],榕:['榕树'],桐:['梧桐','油桐'],枫:['枫树','枫叶'],桦:['白桦','桦树'],杏:['杏花','杏子'],杉:['水杉','杉树'],蝴:['蝴蝶'],蝶:['蝴蝶','彩蝶'],壶:['水壶','茶壶'],鼻:['鼻子','鼻孔'],勺:['勺子','饭勺'],琴:['钢琴','琴声'],鹊:['喜鹊'],盯:['盯着','盯住'],朱:['朱红','朱砂'],扁:['扁担','扁平'],踩:['踩水','踩踏'],刘:['姓刘'],炒:['炒菜','炒饭'],哎:['哎呀'],哇:['好哇'],晒:['晒太阳','晾晒'],漱:['漱口'],沼:['沼泽'],闸:['水闸','闸门'],羔:['羊羔'],蝗:['蝗虫'],猬:['刺猬'],莓:['草莓'],呜:['呜咽','呜呜'],猩:['猩猩'],鸽:['鸽子','白鸽'],蚯:['蚯蚓'],蚓:['蚯蚓'],骆:['骆驼'],驼:['骆驼','驼峰'],狮:['狮子','海狮'],莺:['黄莺','夜莺'],咏:['歌咏','咏叹'],绦:['丝绦'],袄:['棉袄','夹袄'],鹃:['杜鹃'],籽:['种子','菜籽'],亭:['凉亭','亭子'],瓣:['花瓣','蒜瓣'],蔗:['甘蔗','蔗糖'],葱:['大葱','葱花'],巷:['小巷','街巷'],祭:['祭祖','祭扫'],艾:['艾草'],菊:['菊花'],菠:['菠菜','菠萝'],茄:['茄子','番茄'],炖:['炖肉','炖汤'],蘑:['蘑菇'],菇:['蘑菇','香菇'],饺:['饺子','水饺'],酱:['酱油','果酱'],茸:['毛茸茸','鹿茸'],屎:['眼屎','鸟屎'],婶:['婶婶','大婶'],陀:['陀螺'],螺:['田螺','海螺'],毽:['毽子','踢毽子'],叼:['叼走','叼着'],晌:['晌午','半晌'],棚:['大棚','车棚'],驮:['驮运','驮着'],哩:['好哩'],唉:['唉声叹气'],蹄:['马蹄','蹄子'],鹂:['黄鹂'],盏:['一盏','灯盏'],耷:['耷拉'],咦:['咦呀'],竿:['竹竿','鱼竿'],颈:['颈部','长颈鹿'],袜:['袜子','棉袜'],蜈:['蜈蚣'],蚣:['蜈蚣'],愣:['发愣','愣住'],帚:['扫帚'],桶:['水桶','木桶'],箕:['簸箕'],蔷:['蔷薇'],薇:['蔷薇'],哦:['哦呀'],
   行:['行走','步行','行动'],长:['长江','长城','长短'],只:['一只','船只'],乐:['快乐','欢乐','乐园'],得:['得到','获得'],地:['大地','土地','地方'],着:['看着','听着'],还:['还有','还是'],重:['重要','重量'],朝:['朝向','朝代'],发:['发现','出发'],好:['好人','美好'],少:['多少','很少'],数:['数学','数字'],空:['天空','空气'],更:['更加','更好'],没:['没有','没事'],几:['几个','几天'],觉:['觉得','感觉'],背:['背后','后背'],当:['当时','当天'],种:['种子','种类']
@@ -58,6 +59,9 @@ let listenScore = 0;
 let manualStudyWords = JSON.parse(localStorage.getItem(MANUAL_WORDS_KEY) || '{}');
 let overviewPinyinHidden = localStorage.getItem(OVERVIEW_PINYIN_KEY) === 'true';
 let studySentences = JSON.parse(localStorage.getItem(SENTENCES_KEY) || '[]');
+let studyContentMeta = JSON.parse(localStorage.getItem(STUDY_CONTENT_META_KEY) || '{"wordGroups":{},"deletedSentences":{}}');
+studyContentMeta.wordGroups ||= {};
+studyContentMeta.deletedSentences ||= {};
 let speakWordExample = localStorage.getItem(SPEAK_WORD_EXAMPLE_KEY) === 'true';
 let volcanoAnimationEnabled = localStorage.getItem(VOLCANO_ANIMATION_KEY) !== 'false';
 let sentenceRound = null;
@@ -65,6 +69,7 @@ let sentenceAnswer = [];
 let pendingStatusWordIds = [];
 let pendingStatusLabel = '';
 let textbookStatusSyncPromise = null;
+let studySyncRevision = 0;
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -103,7 +108,36 @@ function localTextbookStatusSnapshot() {
     .map((word) => [word.id, { level: Number(word.level || 0), updatedAt: textbookStatusTimestamp(word) }]));
 }
 
+function saveStudyContentMeta() {
+  localStorage.setItem(STUDY_CONTENT_META_KEY, JSON.stringify(studyContentMeta));
+}
+
+function localWordGroupSnapshot() {
+  const chars = new Set([...Object.keys(manualStudyWords), ...Object.keys(studyContentMeta.wordGroups)]);
+  return Object.fromEntries([...chars].map((char) => [char, {
+    words: manualStudyWords[char] || [],
+    updatedAt: studyContentMeta.wordGroups[char]?.updatedAt || '2000-01-01T00:00:00.000Z'
+  }]));
+}
+
+function localSentenceSnapshot() {
+  return Object.fromEntries(studySentences.map((item) => [item.id, {
+    ...item,
+    updatedAt: item.updatedAt || item.createdAt || '2000-01-01T00:00:00.000Z'
+  }]));
+}
+
+function mergeTimedRecords(remote = {}, local = {}) {
+  const merged = { ...remote };
+  Object.entries(local).forEach(([id, entry]) => {
+    const remoteEntry = remote[id];
+    if (!remoteEntry || String(entry.updatedAt || '') >= String(remoteEntry.updatedAt || '')) merged[id] = entry;
+  });
+  return merged;
+}
+
 function markTextbookStatusDirty() {
+  studySyncRevision += 1;
   localStorage.setItem(TEXTBOOK_STATUS_DIRTY_KEY, 'true');
   setStatusSyncState(navigator.onLine ? '等待同步' : '离线保存', navigator.onLine ? 'pending' : 'offline');
   clearTimeout(markTextbookStatusDirty.timer);
@@ -122,6 +156,7 @@ async function syncTextbookStatuses() {
     setStatusSyncState('离线保存', 'offline');
     return;
   }
+  const revisionAtStart = studySyncRevision;
   textbookStatusSyncPromise = (async () => {
     setStatusSyncState('同步中…', 'syncing');
     const headers = { apikey: config.publishableKey, 'x-family-id': progressId, 'Content-Type': 'application/json' };
@@ -129,12 +164,13 @@ async function syncTextbookStatuses() {
     const readResponse = await fetch(readUrl, { headers, cache: 'no-store' });
     if (!readResponse.ok) throw new Error(`status read ${readResponse.status}`);
     const rows = await readResponse.json();
-    const remoteStatuses = rows[0]?.payload?.statuses || {};
-    const localStatuses = localTextbookStatusSnapshot();
-    const mergedStatuses = { ...remoteStatuses };
-    Object.entries(localStatuses).forEach(([id, local]) => {
-      const remote = remoteStatuses[id];
-      if (!remote || String(local.updatedAt || '') >= String(remote.updatedAt || '')) mergedStatuses[id] = local;
+    const remotePayload = rows[0]?.payload || {};
+    const mergedStatuses = mergeTimedRecords(remotePayload.statuses, localTextbookStatusSnapshot());
+    const mergedWordGroups = mergeTimedRecords(remotePayload.wordGroups, localWordGroupSnapshot());
+    const mergedSentences = mergeTimedRecords(remotePayload.sentences, localSentenceSnapshot());
+    const mergedDeletedSentences = { ...(remotePayload.deletedSentences || {}) };
+    Object.entries(studyContentMeta.deletedSentences).forEach(([id, deletedAt]) => {
+      if (String(deletedAt) >= String(mergedDeletedSentences[id] || '')) mergedDeletedSentences[id] = deletedAt;
     });
     let localChanged = false;
     textbookWords.forEach((word) => {
@@ -151,19 +187,48 @@ async function syncTextbookStatuses() {
       saveTextbookWords();
       renderTextbook();
     }
+    let contentChanged = false;
+    Object.entries(mergedWordGroups).forEach(([char, entry]) => {
+      const localTime = studyContentMeta.wordGroups[char]?.updatedAt || '';
+      if (String(entry.updatedAt || '') <= String(localTime)) return;
+      if (Array.isArray(entry.words) && entry.words.length) manualStudyWords[char] = entry.words;
+      else delete manualStudyWords[char];
+      studyContentMeta.wordGroups[char] = { updatedAt: entry.updatedAt };
+      contentChanged = true;
+    });
+    Object.entries(mergedDeletedSentences).forEach(([id, deletedAt]) => {
+      if (String(deletedAt) > String(studyContentMeta.deletedSentences[id] || '')) {
+        studyContentMeta.deletedSentences[id] = deletedAt;
+        contentChanged = true;
+      }
+    });
+    const visibleSentences = Object.values(mergedSentences)
+      .filter((item) => String(mergedDeletedSentences[item.id] || '') < String(item.updatedAt || item.createdAt || ''))
+      .sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+    if (JSON.stringify(visibleSentences) !== JSON.stringify(studySentences)) {
+      studySentences = visibleSentences;
+      contentChanged = true;
+    }
+    if (contentChanged) {
+      localStorage.setItem(MANUAL_WORDS_KEY, JSON.stringify(manualStudyWords));
+      localStorage.setItem(SENTENCES_KEY, JSON.stringify(studySentences));
+      saveStudyContentMeta();
+      if ($('#reviewView').classList.contains('active')) renderReviewOverview();
+    }
     const writeResponse = await fetch(`${config.url}/rest/v1/family_data?on_conflict=family_id`, {
       method: 'POST',
       headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ family_id: progressId, payload: { version: 1, statuses: mergedStatuses } })
+      body: JSON.stringify({ family_id: progressId, payload: { version: 2, statuses: mergedStatuses, wordGroups: mergedWordGroups, sentences: mergedSentences, deletedSentences: mergedDeletedSentences } })
     });
     if (!writeResponse.ok) throw new Error(`status write ${writeResponse.status}`);
-    localStorage.setItem(TEXTBOOK_STATUS_DIRTY_KEY, 'false');
+    if (revisionAtStart === studySyncRevision) localStorage.setItem(TEXTBOOK_STATUS_DIRTY_KEY, 'false');
     setStatusSyncState('已同步', 'synced');
   })().catch((error) => {
     console.warn('掌握状态同步失败，已保存在本机。', error);
     setStatusSyncState(navigator.onLine ? '同步待重试' : '离线保存', navigator.onLine ? 'pending' : 'offline');
   }).finally(() => {
     textbookStatusSyncPromise = null;
+    if (revisionAtStart !== studySyncRevision) markTextbookStatusDirty.timer = setTimeout(syncTextbookStatuses, 300);
   });
   return textbookStatusSyncPromise;
 }
@@ -725,8 +790,10 @@ function saveStudySentence() {
   if (!text || !text.includes(word)) return showToast('句子中需要包含所选词语');
   const normalized = normalizeSentence(text);
   if (normalized.length < 4) return showToast('句子至少需要4个文字');
-  studySentences.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, char, word, text, createdAt: new Date().toISOString() });
+  const createdAt = new Date().toISOString();
+  studySentences.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, char, word, text, createdAt, updatedAt: createdAt });
   localStorage.setItem(SENTENCES_KEY, JSON.stringify(studySentences));
+  markTextbookStatusDirty();
   $('#sentenceTextInput').value = '';
   renderSentenceEditor(char);
   showToast('例句已保存，可以进行句子还原了');
@@ -739,8 +806,11 @@ function toggleCustomSentenceWord() {
 }
 
 function deleteStudySentence(id) {
+  studyContentMeta.deletedSentences[id] = new Date().toISOString();
   studySentences = studySentences.filter((item) => item.id !== id);
   localStorage.setItem(SENTENCES_KEY, JSON.stringify(studySentences));
+  saveStudyContentMeta();
+  markTextbookStatusDirty();
   renderSentenceEditor($('#wordGroupCharInput').value);
   showToast('例句已删除');
 }
@@ -759,7 +829,10 @@ function saveManualStudyWords(event) {
   if (entries.length > 3) return showToast('每个字最多补充3个词语');
   if (entries.length) manualStudyWords[char] = entries;
   else delete manualStudyWords[char];
+  studyContentMeta.wordGroups[char] = { updatedAt: new Date().toISOString() };
   localStorage.setItem(MANUAL_WORDS_KEY, JSON.stringify(manualStudyWords));
+  saveStudyContentMeta();
+  markTextbookStatusDirty();
   closeDialog($('#wordGroupDialog'));
   if ($('#reviewView').classList.contains('active')) {
     renderReviewOverview();
