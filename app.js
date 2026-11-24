@@ -1010,7 +1010,7 @@ function handleListenChoice(event) {
     $('#listenFeedback').textContent = `答对了！这是「${listenTarget.char}」`;
     listenScore += 1;
     $('#listenScore').textContent = `答对 ${listenScore} 个`;
-    speakFeedback('圈圈，你真是太棒了');
+    speakFeedback('Bingo');
     listenTarget = null;
     setTimeout(startListenRound, 900);
   } else {
