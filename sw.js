@@ -1,5 +1,5 @@
-const CACHE = 'zishiguang-v46';
-const FILES = ['./', './index.html', './styles.css?v=46', './cloud-config.js?v=46', './app.js?v=46', './manifest.webmanifest'];
+const CACHE = 'zishiguang-v47';
+const FILES = ['./', './index.html', './styles.css?v=47', './cloud-config.js?v=47', './app.js?v=47', './manifest.webmanifest', './assets/pug-runner.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
@@ -45,4 +45,3 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-

@@ -266,6 +266,7 @@ function showView(id) {
   $('.topbar').style.display = isMainView ? 'flex' : 'none';
   $('.hero').style.display = id === 'homeView' ? 'flex' : 'none';
   $('#mainNav').style.display = isMainView ? 'grid' : 'none';
+  $('#pugRunner').classList.toggle('active', isMainView);
   $('#homeNav').classList.toggle('active', id === 'homeView');
   $('#textbookNav').classList.toggle('active', id === 'textbookView');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1374,4 +1375,3 @@ renderTextbook();
 showView('textbookView');
 loadRemoteTextbookCatalog();
 initVoiceSelector();
-
