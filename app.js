@@ -1112,7 +1112,9 @@ function speakCurrentWord(event) {
 
 function getStudySpeechText(char) {
   const example = getStudyWords(char)[0];
-  return speakWordExample && example ? `${char}，${example}的${char}` : char;
+  if (!speakWordExample || !example) return char;
+  const firstSentence = studySentences.find((item) => item.char === char)?.text?.trim();
+  return firstSentence ? `${char}，${example}的${char}。${firstSentence}` : `${char}，${example}的${char}`;
 }
 
 function speakStudyChar(char) {
