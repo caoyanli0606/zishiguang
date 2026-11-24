@@ -1,5 +1,5 @@
-const CACHE = 'zishiguang-v53';
-const FILES = ['./', './index.html', './styles.css?v=53', './cloud-config.js?v=53', './app.js?v=53', './manifest.webmanifest', './assets/pug-runner.png', './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
+const CACHE = 'zishiguang-v54';
+const FILES = ['./', './index.html', './styles.css?v=54', './cloud-config.js?v=54', './app.js?v=54', './manifest.webmanifest', './assets/pug-runner.png', './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));

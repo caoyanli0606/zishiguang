@@ -77,6 +77,9 @@ let pendingStatusLabel = '';
 let textbookStatusSyncPromise = null;
 let studySyncRevision = 0;
 let activeFeedbackAudio = null;
+let neuralAudioContext = null;
+let activeNeuralSource = null;
+let neuralSpeechRequest = 0;
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -1106,15 +1109,84 @@ function resetSentenceRound() {
 }
 
 function speakGameText(text) {
-  if (!('speechSynthesis' in window)) return;
-  stopFeedbackAudio();
-  window.speechSynthesis.cancel();
+  speakNeuralText(text);
+}
+
+function speakSystemText(text, { onstart, onend } = {}) {
+  if (!('speechSynthesis' in window)) return onend?.();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'zh-CN';
   utterance.rate = 0.72;
   utterance.pitch = 1;
   applySelectedVoice(utterance);
+  utterance.onstart = onstart || null;
+  utterance.onend = utterance.onerror = onend || null;
   window.speechSynthesis.speak(utterance);
+}
+
+async function neuralCacheKey(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`yunxia-c|${text}`));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function getNeuralAudio(text) {
+  const config = window.CLOUD_CONFIG || {};
+  if (!config.url || !config.publishableKey || !config.textbookProgressId) throw new Error('语音云端尚未配置');
+  const key = await neuralCacheKey(text);
+  const cache = 'caches' in window ? await caches.open('zishiguang-neural-voice-v1') : null;
+  const cacheRequest = new Request(`${location.origin}${location.pathname.replace(/[^/]*$/, '')}tts-cache/${key}.mp3`);
+  const cached = await cache?.match(cacheRequest);
+  if (cached) return cached.arrayBuffer();
+
+  const response = await fetch(`${config.url}/functions/v1/tts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: config.publishableKey,
+      Authorization: `Bearer ${config.publishableKey}`,
+      'x-family-id': config.textbookProgressId,
+    },
+    body: JSON.stringify({ text }),
+  });
+  if (!response.ok) throw new Error(`男孩语音生成失败：${response.status}`);
+  await cache?.put(cacheRequest, response.clone());
+  return response.arrayBuffer();
+}
+
+function stopNeuralAudio() {
+  if (!activeNeuralSource) return;
+  try { activeNeuralSource.stop(); } catch (error) { /* 已经结束 */ }
+  activeNeuralSource = null;
+}
+
+async function speakNeuralText(text, callbacks = {}) {
+  const requestId = ++neuralSpeechRequest;
+  stopFeedbackAudio();
+  stopNeuralAudio();
+  window.speechSynthesis?.cancel();
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return speakSystemText(text, callbacks);
+  neuralAudioContext ||= new AudioContextClass();
+  try {
+    await neuralAudioContext.resume();
+    const audioData = await getNeuralAudio(text);
+    if (requestId !== neuralSpeechRequest) return;
+    const buffer = await neuralAudioContext.decodeAudioData(audioData.slice(0));
+    if (requestId !== neuralSpeechRequest) return;
+    const source = neuralAudioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(neuralAudioContext.destination);
+    source.onended = () => {
+      if (activeNeuralSource === source) activeNeuralSource = null;
+      callbacks.onend?.();
+    };
+    activeNeuralSource = source;
+    callbacks.onstart?.();
+    source.start(0);
+  } catch (error) {
+    console.warn('男孩神经语音暂不可用，使用系统语音', error);
+    if (requestId === neuralSpeechRequest) speakSystemText(text, callbacks);
+  }
 }
 
 function rateWord(level) {
@@ -1177,18 +1249,11 @@ function showToast(message) {
 
 function speakCurrentWord() {
   const char = $('#reviewWord').textContent;
-  if (!('speechSynthesis' in window)) return showToast('当前浏览器不支持语音朗读');
-  stopFeedbackAudio();
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(getStudySpeechText(char));
-  utterance.lang = 'zh-CN';
-  utterance.rate = 0.72;
-  utterance.pitch = 1;
-  applySelectedVoice(utterance);
   const card = $('#wordCard');
-  utterance.onstart = () => card.classList.add('speaking');
-  utterance.onend = utterance.onerror = () => card.classList.remove('speaking');
-  window.speechSynthesis.speak(utterance);
+  speakNeuralText(getStudySpeechText(char), {
+    onstart: () => card.classList.add('speaking'),
+    onend: () => card.classList.remove('speaking'),
+  });
 }
 
 function getStudySpeechText(char) {
@@ -1204,6 +1269,8 @@ function speakStudyChar(char) {
 
 function speakFeedback(message) {
   window.speechSynthesis?.cancel();
+  neuralSpeechRequest += 1;
+  stopNeuralAudio();
   stopFeedbackAudio();
   const source = FEEDBACK_AUDIO_FILES[message];
   if (source) {
