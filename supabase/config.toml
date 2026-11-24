@@ -1,0 +1,4 @@
+project_id = "qzddjudxsgmkssdayhlu"
+
+[functions.tts]
+verify_jwt = false
