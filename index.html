@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=62" />
+  <link rel="stylesheet" href="styles.css?v=63" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -270,28 +270,37 @@
     </form>
   </dialog>
 
-  <dialog id="wordGroupDialog">
+  <dialog id="wordGroupDialog" aria-labelledby="wordGroupDialogTitle">
     <form id="wordGroupForm" method="dialog">
       <div class="dialog-head">
-        <div><p class="eyebrow">组词与造句</p><h2><span id="wordGroupChar">字</span> · 学习补充</h2></div>
-        <button type="button" class="close-button" id="closeWordGroup">×</button>
+        <div><p class="eyebrow">组词与造句</p><h2 id="wordGroupDialogTitle"><span id="wordGroupChar">字</span> · 学习补充</h2></div>
+        <button type="button" class="close-button" id="closeWordGroup" aria-label="关闭学习补充">×</button>
       </div>
       <input id="wordGroupCharInput" type="hidden" />
-      <label for="wordGroupInput">补充词语 <span>（最多3个）</span></label>
-      <input id="wordGroupInput" type="text" maxlength="30" placeholder="例如：春天 春风 春雨" />
-      <p class="field-help">可用空格、逗号或顿号分隔；留空保存即可删除手动词语。</p>
-      <p class="word-group-system" id="wordGroupSystem"></p>
-      <button class="primary-button" type="submit">保存组词</button>
-      <div class="sentence-editor">
-        <h3>用词语造句</h3>
-        <label for="sentenceWordSelect">选择组词</label>
-        <select id="sentenceWordSelect" aria-label="选择用于造句的词语"></select>
-        <input id="sentenceCustomWordInput" class="sentence-custom-word" type="text" maxlength="12" placeholder="输入包含当前汉字的词语" hidden />
-        <label for="sentenceTextInput">输入完整句子</label>
-        <textarea id="sentenceTextInput" rows="2" maxlength="60" placeholder="例如：春天来了，花儿开了。"></textarea>
-        <button class="sentence-save-button" id="saveStudySentence" type="button">保存这个句子</button>
-        <div id="savedSentenceList" class="saved-sentence-list"></div>
+      <div class="study-editor">
+        <div class="word-group-editor">
+          <label class="word-group-heading" for="wordGroupInput">补充词语 <span>（最多3个）</span></label>
+          <input id="wordGroupInput" type="text" maxlength="30" placeholder="例如：春天 春风 春雨" aria-describedby="wordGroupHelp" />
+          <p class="field-help" id="wordGroupHelp">空格、逗号或顿号分隔，留空保存可删除。</p>
+          <p class="word-group-system" id="wordGroupSystem"></p>
+          <button class="primary-button" type="submit">保存组词</button>
+        </div>
+        <div class="sentence-editor">
+          <h3>用词语造句</h3>
+          <div class="sentence-word-field">
+            <label for="sentenceWordSelect">选择组词</label>
+            <select id="sentenceWordSelect"></select>
+          </div>
+          <input id="sentenceCustomWordInput" class="sentence-custom-word" type="text" maxlength="12" placeholder="输入包含当前汉字的词语" aria-label="输入用于造句的词语" hidden />
+          <label class="sentence-text-label" for="sentenceTextInput">输入完整句子</label>
+          <textarea id="sentenceTextInput" rows="2" maxlength="60" placeholder="例如：春天来了，花儿开了。"></textarea>
+          <button class="sentence-save-button" id="saveStudySentence" type="button">保存这个句子</button>
+        </div>
       </div>
+      <details id="savedSentences" class="saved-sentences" hidden>
+        <summary>已保存的句子 <span id="savedSentenceCount" aria-live="polite"></span></summary>
+        <div id="savedSentenceList" class="saved-sentence-list"></div>
+      </details>
     </form>
   </dialog>
 
@@ -314,7 +323,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=62"></script>
-  <script src="app.js?v=62"></script>
+  <script src="cloud-config.js?v=63"></script>
+  <script src="app.js?v=63"></script>
 </body>
 </html>

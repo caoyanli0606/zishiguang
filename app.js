@@ -928,24 +928,28 @@ function openWordGroupDialog(char) {
   $('#wordGroupCharInput').value = char;
   $('#wordGroupInput').value = (manualStudyWords[char] || []).join(' ');
   $('#sentenceCustomWordInput').value = '';
-  $('#sentenceCustomWordInput').hidden = true;
   $('#sentenceTextInput').value = '';
+  $('#savedSentences').open = false;
   const automatic = getAutomaticStudyWords(char);
-  $('#wordGroupSystem').textContent = automatic.length ? `系统推荐：${automatic.join(' · ')}` : '这个字暂时没有系统推荐词，可以手动补充。';
+  const recommendations = $('#wordGroupSystem');
+  recommendations.hidden = !automatic.length;
+  recommendations.textContent = automatic.length ? `系统推荐：${automatic.join(' · ')}` : '';
   renderSentenceEditor(char);
   showDialog($('#wordGroupDialog'));
-  setTimeout(() => $('#wordGroupInput').focus(), 80);
+  $('#closeWordGroup').focus();
 }
 
 function renderSentenceEditor(char) {
   const options = getStudyWords(char);
-  $('#sentenceWordSelect').innerHTML = `${options.map((word) => `<option value="${escapeHtml(word)}">${escapeHtml(word)}</option>`).join('')}<option value="__custom__">＋ 手动输入其他词语</option>`;
-  $('#sentenceWordSelect').value = options[0] || '__custom__';
+  const select = $('#sentenceWordSelect');
+  select.innerHTML = `${options.map((word) => `<option value="${escapeHtml(word)}">${escapeHtml(word)}</option>`).join('')}<option value="__custom__">＋ 手动输入其他词语</option>`;
+  select.value = options[0] || '__custom__';
+  select.closest('.sentence-word-field').hidden = !options.length;
   toggleCustomSentenceWord();
   const sentences = studySentences.filter((item) => item.char === char);
-  $('#savedSentenceList').innerHTML = sentences.length
-    ? sentences.map((item) => `<article><div><b>${escapeHtml(item.word)}</b><p>${escapeHtml(item.text)}</p></div><button type="button" data-delete-sentence="${item.id}" aria-label="删除这个句子">删除</button></article>`).join('')
-    : '<p class="sentence-list-empty">还没有保存句子</p>';
+  $('#savedSentences').hidden = !sentences.length;
+  $('#savedSentenceCount').textContent = sentences.length ? `${sentences.length} 条` : '';
+  $('#savedSentenceList').innerHTML = sentences.map((item) => `<article><div><b>${escapeHtml(item.word)}</b><p>${escapeHtml(item.text)}</p></div><button type="button" data-delete-sentence="${item.id}" aria-label="删除这个句子">删除</button></article>`).join('');
 }
 
 function saveStudySentence() {
@@ -966,9 +970,7 @@ function saveStudySentence() {
 }
 
 function toggleCustomSentenceWord() {
-  const isCustom = $('#sentenceWordSelect').value === '__custom__';
-  $('#sentenceCustomWordInput').hidden = !isCustom;
-  if (isCustom) setTimeout(() => $('#sentenceCustomWordInput').focus(), 30);
+  $('#sentenceCustomWordInput').hidden = $('#sentenceWordSelect').value !== '__custom__';
 }
 
 function deleteStudySentence(id) {
@@ -1735,7 +1737,11 @@ $('#editCurrentWords').addEventListener('click', (event) => {
 $('#closeWordGroup').addEventListener('click', () => closeDialog($('#wordGroupDialog')));
 $('#wordGroupForm').addEventListener('submit', saveManualStudyWords);
 $('#saveStudySentence').addEventListener('click', saveStudySentence);
-$('#sentenceWordSelect').addEventListener('change', toggleCustomSentenceWord);
+$('#sentenceWordSelect').addEventListener('change', () => {
+  toggleCustomSentenceWord();
+  const input = $('#sentenceCustomWordInput');
+  if (!input.hidden) input.focus();
+});
 $('#savedSentenceList').addEventListener('click', (event) => {
   const button = event.target.closest('[data-delete-sentence]');
   if (button) deleteStudySentence(button.dataset.deleteSentence);
