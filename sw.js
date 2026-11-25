@@ -1,10 +1,10 @@
-const CACHE = 'zishiguang-v59';
+const CACHE = 'zishiguang-v60';
 const GENERATED_AUDIO_CACHE = 'zishiguang-generated-audio-v1';
 const GENERATED_AUDIO_PATH = new URL('./assets/generated-tts/', self.registration.scope).pathname;
 const REPOSITORY_AUDIO_URL = 'https://raw.githubusercontent.com/caoyanli0606/zishiguang/main/assets/generated-tts/';
 const PUG_GREETING_FILE = './assets/voice-pack/pipi-welcome-boy-c.mp3';
 const PUG_GREETING_URL = new URL(PUG_GREETING_FILE, self.registration.scope).href;
-const FILES = ['./', './index.html', './styles.css?v=59', './cloud-config.js?v=59', './app.js?v=59', './manifest.webmanifest', './assets/pug-runner.png', PUG_GREETING_FILE, './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
+const FILES = ['./', './index.html', './styles.css?v=60', './cloud-config.js?v=60', './app.js?v=60', './manifest.webmanifest', './assets/pug-runner.png', PUG_GREETING_FILE, './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));

@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/generate-tts.yml'
+      - 'app.js'
       - 'tools/generate-queued-tts.mjs'
       - 'tools/mark-queued-tts.mjs'
   schedule:

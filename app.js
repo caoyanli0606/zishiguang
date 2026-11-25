@@ -85,8 +85,10 @@ let pugGreetingAttempt = 0;
 let neuralAudioContext = null;
 let activeNeuralSource = null;
 let neuralSpeechRequest = 0;
+let systemVoiceUnlocked = false;
 const preparedNeuralAudio = new Map();
 const neuralAudioLookups = new Map();
+const recentNeuralMisses = new Map();
 const queuedNeuralAudio = new Set();
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
@@ -1301,23 +1303,31 @@ async function neuralCacheKey(text) {
 }
 
 function prepareNeuralAudio(text) {
-  if (preparedNeuralAudio.has(text)) return Promise.resolve(null);
+  const existing = preparedNeuralAudio.get(text);
+  if (existing) return Promise.resolve({ audio: existing });
   if (neuralAudioLookups.has(text)) return neuralAudioLookups.get(text);
+  const recentMiss = recentNeuralMisses.get(text);
+  if (recentMiss?.retryAfter > Date.now()) return Promise.resolve({ missingKey: recentMiss.key });
+  recentNeuralMisses.delete(text);
 
   const lookup = (async () => {
     const key = await neuralCacheKey(text);
     const response = await fetch(`./assets/generated-tts/${key}.mp3`, { cache: 'no-store' });
-    if (response.status === 404) return key;
+    if (response.status === 404) {
+      if (recentNeuralMisses.size >= 100) recentNeuralMisses.delete(recentNeuralMisses.keys().next().value);
+      recentNeuralMisses.set(text, { key, retryAfter: Date.now() + 20000 });
+      return { missingKey: key };
+    }
     if (!response.ok || !response.headers.get('Content-Type')?.startsWith('audio/')) {
       throw new Error(`男孩语音读取失败：${response.status}`);
     }
     const audio = await response.arrayBuffer();
     if (!audio.byteLength) throw new Error('男孩语音文件为空');
-    if (preparedNeuralAudio.size >= 24) {
+    if (preparedNeuralAudio.size >= 48) {
       preparedNeuralAudio.delete(preparedNeuralAudio.keys().next().value);
     }
     preparedNeuralAudio.set(text, audio);
-    return null;
+    return { audio };
   })().finally(() => neuralAudioLookups.delete(text));
 
   neuralAudioLookups.set(text, lookup);
@@ -1338,7 +1348,6 @@ async function queueNeuralAudio(text, key) {
       headers: {
         'Content-Type': 'application/json',
         apikey: config.publishableKey,
-        Authorization: `Bearer ${config.publishableKey}`,
         'x-family-id': config.textbookProgressId,
         Prefer: 'resolution=ignore-duplicates,return=minimal',
       },
@@ -1365,16 +1374,48 @@ function stopStudySpeech() {
   $('#wordCard').classList.remove('speaking');
 }
 
-async function playPreparedNeuralAudio(audio, requestId, callbacks) {
+function withSpeechTimeout(work, milliseconds) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('语音加载超时')), milliseconds);
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
+
+function unlockStudyPlayback() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  neuralAudioContext ||= new AudioContextClass();
-  if (neuralAudioContext.state !== 'running') await neuralAudioContext.resume();
+  try {
+    neuralAudioContext ||= new AudioContextClass();
+    if (neuralAudioContext.state === 'running') return Promise.resolve(neuralAudioContext);
+    return withSpeechTimeout(neuralAudioContext.resume(), 2500).then(() => neuralAudioContext, () => null);
+  } catch (error) {
+    return Promise.resolve(null);
+  }
+}
+
+function unlockSystemVoice() {
+  const synthesis = window.speechSynthesis;
+  if (systemVoiceUnlocked || !synthesis || !window.SpeechSynthesisUtterance || navigator.userActivation?.isActive === false) return;
+  // Safari grants permission for later speech when speak() is called in a tap.
+  // The empty utterance keeps a possible fallback silent until the lookup finishes.
+  try {
+    const permissionUtterance = new SpeechSynthesisUtterance('');
+    permissionUtterance.volume = 0;
+    synthesis.speak(permissionUtterance);
+    synthesis.cancel();
+    systemVoiceUnlocked = true;
+  } catch (error) { /* A system voice can still be attempted after loading. */ }
+}
+
+async function playPreparedNeuralAudio(audio, contextReady, requestId, callbacks) {
+  const context = await contextReady;
   if (requestId !== neuralSpeechRequest) return;
-  const buffer = await neuralAudioContext.decodeAudioData(audio.slice(0));
+  if (context?.state !== 'running') throw new Error('音频播放不可用');
+  const buffer = await withSpeechTimeout(context.decodeAudioData(audio.slice(0)), 2500);
   if (requestId !== neuralSpeechRequest) return;
-  const source = neuralAudioContext.createBufferSource();
+  const source = context.createBufferSource();
   source.buffer = buffer;
-  source.connect(neuralAudioContext.destination);
+  source.connect(context.destination);
   source.onended = () => {
     if (activeNeuralSource === source) activeNeuralSource = null;
     if (requestId === neuralSpeechRequest) callbacks.onend?.();
@@ -1390,7 +1431,7 @@ function speakNeuralText(text, callbacks = {}) {
   stopStudySpeech();
   const requestId = neuralSpeechRequest;
   let systemSpeechFailed = false;
-  const playSystemVoice = () => speakSystemText(text, {
+  const playSystemVoice = (content = text) => speakSystemText(content, {
     onstart: () => { if (requestId === neuralSpeechRequest) callbacks.onstart?.(); },
     onend: () => { if (requestId === neuralSpeechRequest) callbacks.onend?.(); },
     onerror: (reason) => {
@@ -1402,24 +1443,48 @@ function speakNeuralText(text, callbacks = {}) {
     },
   });
   if (!window.AudioContext && !window.webkitAudioContext) return playSystemVoice();
+  const contextReady = unlockStudyPlayback();
+  unlockSystemVoice();
 
-  const audio = preparedNeuralAudio.get(text);
-  if (audio) {
-    playPreparedNeuralAudio(audio, requestId, callbacks).catch(() => {
-      preparedNeuralAudio.delete(text);
-      if (requestId === neuralSpeechRequest) playSystemVoice();
-    });
-    return;
+  function findClip(content, announce) {
+    const lookup = prepareNeuralAudio(content);
+    lookup.then(async ({ missingKey }) => {
+      if (!missingKey || !await queueNeuralAudio(content, missingKey)) return;
+      if (announce && requestId === neuralSpeechRequest && !systemSpeechFailed) showToast('男孩语音正在生成');
+    }).catch((error) => console.warn('男孩语音暂不可用', error));
+    return withSpeechTimeout(lookup, 6000).then((clip) => clip.audio, () => null);
   }
 
-  // Some browsers allow the system voice only during the original tap.
-  // Fetch and enqueue independently so the fallback starts while that tap is active.
-  playSystemVoice();
-  prepareNeuralAudio(text).then(async (key) => {
-    if (key && await queueNeuralAudio(text, key) && requestId === neuralSpeechRequest && !systemSpeechFailed) {
-      showToast('男孩语音正在生成，暂用系统读音');
+  const char = callbacks.baseChar;
+  const useStandalone = char && text.startsWith(`${char}，`);
+  const fullClip = findClip(text, true);
+  const standaloneClip = useStandalone ? findClip(char, false) : null;
+  return (async () => {
+    const audio = await fullClip;
+    if (requestId !== neuralSpeechRequest) return;
+    if (audio) {
+      try {
+        await playPreparedNeuralAudio(audio, contextReady, requestId, callbacks);
+        return;
+      } catch (error) {
+        preparedNeuralAudio.delete(text);
+      }
     }
-  }).catch((error) => console.warn('男孩语音暂不可用', error));
+    const characterAudio = await standaloneClip;
+    if (requestId !== neuralSpeechRequest) return;
+    if (characterAudio) {
+      try {
+        await playPreparedNeuralAudio(characterAudio, contextReady, requestId, {
+          ...callbacks,
+          onend: () => playSystemVoice(text.slice(char.length + 1)),
+        });
+        return;
+      } catch (error) {
+        preparedNeuralAudio.delete(char);
+      }
+    }
+    if (requestId === neuralSpeechRequest) playSystemVoice();
+  })();
 }
 
 function rateWord(level) {
@@ -1483,6 +1548,7 @@ function speakCurrentWord() {
   const char = $('#reviewWord').textContent;
   const card = $('#wordCard');
   speakNeuralText(getStudySpeechText(char), {
+    baseChar: char,
     onstart: () => card.classList.add('speaking'),
     onend: () => card.classList.remove('speaking'),
   });
@@ -1496,7 +1562,7 @@ function getStudySpeechText(char) {
 }
 
 function speakStudyChar(char) {
-  speakGameText(getStudySpeechText(char));
+  speakNeuralText(getStudySpeechText(char), { baseChar: char });
 }
 
 function speakFeedback(message) {
