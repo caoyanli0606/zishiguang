@@ -80,7 +80,6 @@ let textbookLessonSyncPromise = null;
 let textbookLessonRevision = 0;
 let studySyncRevision = 0;
 let activeFeedbackAudio = null;
-let pugGreetingNeedsTap = false;
 let pugGreetingAttempt = 0;
 let neuralAudioContext = null;
 let activeNeuralSource = null;
@@ -501,7 +500,6 @@ function showView(id) {
   const isEnteringTextbook = id === 'textbookView' && !$('#textbookView').classList.contains('active');
   document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === id));
   const isMainView = id === 'homeView' || id === 'textbookView';
-  const isEnteringHome = isMainView && !$('#pugRunner').classList.contains('active');
   $('.topbar').style.display = isMainView ? 'flex' : 'none';
   $('.hero').style.display = id === 'homeView' ? 'flex' : 'none';
   $('#mainNav').style.display = isMainView ? 'grid' : 'none';
@@ -509,29 +507,23 @@ function showView(id) {
   $('#homeNav').classList.toggle('active', id === 'homeView');
   $('#textbookNav').classList.toggle('active', id === 'textbookView');
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (isEnteringHome) playPugGreeting({ autoplay: true });
   if (!isMainView) stopPugGreeting();
   if (isEnteringTextbook) syncTextbookLessons();
 }
 
 function stopPugGreeting() {
-  pugGreetingNeedsTap = false;
   pugGreetingAttempt += 1;
   const audio = $('#pugGreetingAudio');
   audio.pause();
   if (audio.currentTime > 0) audio.currentTime = 0;
 }
 
-function playPugGreeting({ autoplay = false } = {}) {
+function playPugGreeting() {
   stopPugGreeting();
   const attempt = pugGreetingAttempt;
-  $('#pugGreetingAudio').play()?.catch((error) => {
+  $('#pugGreetingAudio').play()?.catch(() => {
     if (attempt !== pugGreetingAttempt) return;
-    if (autoplay) {
-      pugGreetingNeedsTap = error.name === 'NotAllowedError';
-    } else {
-      showToast('皮皮的语音暂时无法播放，请再点一次');
-    }
+    showToast('皮皮的语音暂时无法播放，请再点一次');
   });
 }
 
@@ -1695,11 +1687,7 @@ function returnFromReview() {
 }
 
 $('#todayLabel').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
-const pugGreeting = $('#pugGreeting');
-pugGreeting.addEventListener('click', () => playPugGreeting());
-document.addEventListener('click', (event) => {
-  if (pugGreetingNeedsTap && !pugGreeting.contains(event.target)) playPugGreeting();
-}, true);
+$('#pugGreeting').addEventListener('click', playPugGreeting);
 $('#openAdd').addEventListener('click', () => {
   if ($('#textbookView').classList.contains('active')) openTextbookDialog();
   else openAddDialog();
