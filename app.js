@@ -499,6 +499,7 @@ function levelText(level) {
 function showView(id) {
   const isEnteringTextbook = id === 'textbookView' && !$('#textbookView').classList.contains('active');
   document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === id));
+  document.body.classList.toggle('review-page', id === 'reviewView');
   const isMainView = id === 'homeView' || id === 'textbookView';
   $('.topbar').style.display = isMainView ? 'flex' : 'none';
   $('.hero').style.display = id === 'homeView' ? 'flex' : 'none';
@@ -1228,7 +1229,7 @@ function renderSentenceAnswer() {
   if (!sentenceRound) return;
   $('#sentenceAnswer').innerHTML = sentenceAnswer.length
     ? sentenceAnswer.map((entry, index) => `<button type="button" data-sentence-answer="${index}">${escapeHtml(entry.char)}</button>`).join('')
-    : '<span>从下方选择第一个字</span>';
+    : '<span>请选择第一个字</span>';
 }
 
 function chooseSentenceTile(event) {
@@ -1773,7 +1774,7 @@ $('#wordCard').addEventListener('click', (event) => {
   speakCurrentWord();
 });
 $('#wordCard').addEventListener('keydown', (event) => {
-  if (event.key !== 'Enter' && event.key !== ' ') return;
+  if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
   event.preventDefault();
   event.currentTarget.click();
 });

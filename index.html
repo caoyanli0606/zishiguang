@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=63" />
+  <link rel="stylesheet" href="styles.css?v=64" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -66,17 +66,16 @@
     </section>
 
     <section id="reviewView" class="view review-view" aria-live="polite">
-      <div class="review-top">
-        <button class="back-button" id="exitReview">← 退出</button>
-        <span class="progress-pill" id="reviewProgress">1 / 1</span>
-      </div>
-      <div class="progress-track"><div id="progressBar"></div></div>
-      <div class="review-session-summary">
-        <div><span>✨</span><p>本轮挑战<small>先回忆，再翻卡确认</small></p></div>
+      <div class="review-toolbar">
+        <button class="back-button" id="exitReview" type="button">← 退出</button>
+        <div class="review-progress">
+          <div class="progress-track" aria-hidden="true"><div id="progressBar"></div></div>
+          <span class="progress-pill" id="reviewProgress">1 / 1</span>
+        </div>
         <div class="review-summary-tools">
           <button class="shuffle-current-button" id="shuffleCurrentLesson" type="button" hidden>⇄ 打乱本课</button>
           <label class="review-speech-switch" for="speakWordExample">
-            <span>点读附带组词</span>
+            <span>点读带组词</span>
             <input id="speakWordExample" type="checkbox" role="switch" />
           </label>
         </div>
@@ -92,26 +91,27 @@
       </div>
 
       <div id="cardModePanel" class="review-mode-panel active">
-      <div id="reviewStage" class="review-stage">
-        <article id="wordCard" class="word-card" tabindex="0" role="button" aria-label="点击卡片朗读并显示提示">
-          <span class="card-seal">认</span>
-          <span class="card-hint" id="revealPrompt">先自己读一读，再点卡片听读音和看提示</span>
-          <div class="big-word" id="reviewWord">字</div>
-          <div class="memory-cue" id="memoryCue"></div>
-          <button class="edit-current-words" id="editCurrentWords" type="button">＋ 组词/造句</button>
-          <span class="card-date" id="reviewDate"></span>
-        </article>
-      </div>
-
-      <div class="rating-panel">
-        <p><b>记得怎么样？</b><span>按真实感觉选择，下次复习会更准</span></p>
-        <div class="rating-buttons">
-          <button class="rating-again" data-rating="1"><span>🌱</span><b>再练练</b><small>今天再见</small></button>
-          <button class="rating-familiar" data-rating="2"><span>🙂</span><b>有点熟</b><small>2 天后再见</small></button>
-          <button class="rating-known" data-rating="3"><span>⭐</span><b>认识</b><small>7 天后巩固</small></button>
+        <div id="reviewStage" class="review-stage">
+          <article id="wordCard" class="word-card" tabindex="0" role="button" aria-label="点击卡片朗读并显示提示">
+            <span class="card-seal" aria-hidden="true">认</span>
+            <span class="card-hint" id="revealPrompt">先自己读一读，再点卡片听读音和看提示</span>
+            <div class="card-reading"><div class="big-word" id="reviewWord">字</div></div>
+            <div class="card-footer">
+              <div class="memory-cue" id="memoryCue"></div>
+              <button class="edit-current-words" id="editCurrentWords" type="button">＋ 组词/造句</button>
+              <span class="card-date" id="reviewDate"></span>
+            </div>
+          </article>
         </div>
-        <button class="next-card-button" id="nextCard" type="button"><span aria-hidden="true">⏭</span> 下一个字</button>
-      </div>
+        <div class="rating-panel">
+          <p><b>记得怎么样？</b></p>
+          <div class="rating-buttons">
+            <button class="rating-again" type="button" data-rating="1"><span>🌱</span><b>再练练</b><small>今天再见</small></button>
+            <button class="rating-familiar" type="button" data-rating="2"><span>🙂</span><b>有点熟</b><small>2 天后再见</small></button>
+            <button class="rating-known" type="button" data-rating="3"><span>⭐</span><b>认识</b><small>7 天后巩固</small></button>
+          </div>
+          <button class="next-card-button" id="nextCard" type="button"><span aria-hidden="true">⏭</span> 下一个字</button>
+        </div>
       </div>
 
       <section id="overviewModePanel" class="review-mode-panel game-panel">
@@ -132,8 +132,10 @@
             <div id="pairPinyins" class="pair-column"></div>
           </section>
         </div>
-        <p id="pairFeedback" class="pair-feedback" aria-live="polite">先选择左边的汉字</p>
-        <button id="nextPairGroup" class="game-next-button" type="button" hidden>下一组</button>
+        <div class="pair-result">
+          <p id="pairFeedback" class="pair-feedback" aria-live="polite">先选择左边的汉字</p>
+          <button id="nextPairGroup" class="game-next-button" type="button" hidden>下一组</button>
+        </div>
         <div id="volcanoCelebration" class="volcano-celebration" aria-hidden="true">
           <div class="volcano-sky">
             <div class="volcano-glow"></div>
@@ -323,7 +325,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=63"></script>
-  <script src="app.js?v=63"></script>
+  <script src="cloud-config.js?v=64"></script>
+  <script src="app.js?v=64"></script>
 </body>
 </html>
