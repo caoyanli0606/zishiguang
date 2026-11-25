@@ -1,9 +1,10 @@
-const CACHE = 'zishiguang-v58';
+const CACHE = 'zishiguang-v59';
 const GENERATED_AUDIO_CACHE = 'zishiguang-generated-audio-v1';
 const GENERATED_AUDIO_PATH = new URL('./assets/generated-tts/', self.registration.scope).pathname;
+const REPOSITORY_AUDIO_URL = 'https://raw.githubusercontent.com/caoyanli0606/zishiguang/main/assets/generated-tts/';
 const PUG_GREETING_FILE = './assets/voice-pack/pipi-welcome-boy-c.mp3';
 const PUG_GREETING_URL = new URL(PUG_GREETING_FILE, self.registration.scope).href;
-const FILES = ['./', './index.html', './styles.css?v=58', './cloud-config.js?v=58', './app.js?v=58', './manifest.webmanifest', './assets/pug-runner.png', PUG_GREETING_FILE, './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
+const FILES = ['./', './index.html', './styles.css?v=59', './cloud-config.js?v=59', './app.js?v=59', './manifest.webmanifest', './assets/pug-runner.png', PUG_GREETING_FILE, './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
@@ -21,11 +22,34 @@ async function loadGeneratedAudio(request) {
   const cache = await caches.open(GENERATED_AUDIO_CACHE).catch(() => null);
   const cached = await cache?.match(request).catch(() => null);
   if (cached) return cached;
-  const response = await fetch(request);
+  let response = await fetch(request);
+  if (response.status === 404) {
+    const file = new URL(request.url).pathname.slice(GENERATED_AUDIO_PATH.length);
+    if (/^[a-f0-9]{64}\.mp3$/.test(file)) {
+      const published = await fetchRepositoryAudio(file).catch(() => null);
+      if (published) response = published;
+    }
+  }
   if (response.status === 200 && response.headers.get('Content-Type')?.startsWith('audio/')) {
     await cache?.put(request, response.clone()).catch(() => {});
   }
   return response;
+}
+
+async function fetchRepositoryAudio(file) {
+  const url = new URL(file, REPOSITORY_AUDIO_URL);
+  url.searchParams.set('minute', String(Math.floor(Date.now() / 60000)));
+  const response = await fetch(url, {
+    credentials: 'omit',
+    cache: 'no-store',
+    signal: AbortSignal.timeout?.(5000),
+  });
+  if (!response.ok) return null;
+  const audio = new Uint8Array(await response.arrayBuffer());
+  const frame = audio[0] === 0xff && (audio[1] & 0xe0) === 0xe0;
+  const tag = audio[0] === 0x49 && audio[1] === 0x44 && audio[2] === 0x33;
+  if (audio.length < 1000 || !(frame || tag)) return null;
+  return new Response(audio, { headers: { 'Content-Type': 'audio/mpeg' } });
 }
 
 async function loadPugGreeting(request) {

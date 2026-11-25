@@ -2,11 +2,18 @@ name: Generate queued boy voice
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/generate-tts.yml'
+      - 'tools/generate-queued-tts.mjs'
+      - 'tools/mark-queued-tts.mjs'
   schedule:
-    - cron: '2/5 * * * *'
+    - cron: '2-59/5 * * * *'
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: generate-queued-tts
@@ -14,9 +21,13 @@ concurrency:
 
 jobs:
   generate:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -25,13 +36,30 @@ jobs:
       - name: Generate queued audio
         run: node tools/generate-queued-tts.mjs
       - name: Commit generated audio
+        id: audio
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/generated-tts
+          git add -- assets/generated-tts
           if ! git diff --cached --quiet; then
             git commit -m "自动生成男孩语音"
-            git push
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi
+          if [ "$(cat generated-tts-results.json)" != '[]' ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Request GitHub Pages publication
+        if: steps.audio.outputs.ready == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 30 \
+            --request POST \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/pages/builds"
       - name: Mark queue as generated
+        if: steps.audio.outputs.ready == 'true'
         run: node tools/mark-queued-tts.mjs
