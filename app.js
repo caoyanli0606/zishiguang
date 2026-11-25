@@ -4,6 +4,7 @@ const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
 const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
 const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
 const TEXTBOOK_OVERRIDES_KEY = 'zishiguang-textbook-overrides-v1';
+const LEGACY_TEXTBOOK_EDIT_TIME = '2000-01-01T00:00:00.000Z';
 const TEXTBOOK_STATUS_DIRTY_KEY = 'zishiguang-textbook-status-dirty-v1';
 const VOICE_KEY = 'zishiguang-voice-v1';
 const SPEAK_WORD_EXAMPLE_KEY = 'zishiguang-speak-word-example-v1';
@@ -75,6 +76,8 @@ let sentenceAnswer = [];
 let pendingStatusWordIds = [];
 let pendingStatusLabel = '';
 let textbookStatusSyncPromise = null;
+let textbookLessonSyncPromise = null;
+let textbookLessonRevision = 0;
 let studySyncRevision = 0;
 let activeFeedbackAudio = null;
 let pugGreetingNeedsTap = false;
@@ -109,6 +112,164 @@ function setStatusSyncState(text, mode = '') {
   if (!element) return;
   element.textContent = text;
   element.dataset.mode = mode;
+}
+
+function setLessonSyncState(text, mode = '') {
+  const element = $('#lessonSyncState');
+  element.textContent = text;
+  element.dataset.mode = mode;
+}
+
+function textbookLessonWordId(sourceKey, char) {
+  return `lesson-${encodeURIComponent(sourceKey)}-${char}`;
+}
+
+function normalizeTextbookLessons(records = {}) {
+  const lessons = {};
+  for (const [sourceKey, entry] of Object.entries(records || {}).sort(([a], [b]) => a.localeCompare(b))) {
+    const grade = Number(entry?.grade);
+    const semester = Number(entry?.semester);
+    const unit = entry?.unit;
+    if (!Number.isInteger(grade) || grade < 1 || grade > 6 || ![1, 2].includes(semester)) continue;
+    if (!sourceKey.startsWith(`${grade}|${semester}|`) || typeof unit !== 'string' || !unit || !Array.isArray(entry.chars)) continue;
+    const chars = [...new Set(entry.chars.filter((char) => typeof char === 'string' && /^[\u3400-\u9fff]$/.test(char)))];
+    if (!chars.length) continue;
+    const wordIds = Object.fromEntries(chars.map((char) => {
+      const id = entry.wordIds?.[char];
+      const validId = typeof id === 'string' && /^(?:catalog|tb|override|lesson)-[^\s"<>&]+$/.test(id) && id.endsWith(`-${char}`);
+      return [char, validId ? id : textbookLessonWordId(sourceKey, char)];
+    }));
+    lessons[sourceKey] = {
+      currentKey: `${grade}|${semester}|${unit}`, grade, semester, unit,
+      bookUnit: typeof entry.bookUnit === 'string' && entry.bookUnit ? entry.bookUnit : '自定义课时',
+      lessonOrder: Number(entry.lessonOrder) || 9999,
+      chars, wordIds,
+      updatedAt: Number.isFinite(Date.parse(entry.updatedAt)) ? new Date(entry.updatedAt).toISOString() : LEGACY_TEXTBOOK_EDIT_TIME,
+    };
+  }
+  return lessons;
+}
+
+function saveTextbookLessons() {
+  localStorage.setItem(TEXTBOOK_OVERRIDES_KEY, JSON.stringify(textbookOverrides));
+}
+
+function migrateLocalTextbookLessons() {
+  const cachedLessons = new Map();
+  for (const word of textbookWords) {
+    const key = lessonKey(word);
+    if (!cachedLessons.has(key)) cachedLessons.set(key, []);
+    cachedLessons.get(key).push(word);
+  }
+  const migrated = { ...textbookOverrides };
+  const representedKeys = new Set();
+  for (const [sourceKey, entry] of Object.entries(migrated)) {
+    if (!entry) continue;
+    representedKeys.add(sourceKey);
+    representedKeys.add(entry.currentKey);
+    if (entry.wordIds) continue;
+    const cached = cachedLessons.get(entry.currentKey) || cachedLessons.get(sourceKey) || [];
+    migrated[sourceKey] = { ...entry, wordIds: Object.fromEntries(cached.map((word) => [word.char, word.id])) };
+  }
+  for (const [key, entries] of cachedLessons) {
+    if (representedKeys.has(key) || !entries.some((word) => !word.catalog || word.localOverride)) continue;
+    const sorted = sortTextbookWords(entries);
+    const { grade, semester, unit, bookUnit, lessonOrder } = sorted[0];
+    migrated[key] = {
+      grade, semester, unit: unit || '未分课时', bookUnit, lessonOrder,
+      chars: sorted.map((word) => word.char),
+      wordIds: Object.fromEntries(sorted.map((word) => [word.char, word.id])),
+    };
+  }
+  textbookOverrides = normalizeTextbookLessons(migrated);
+  saveTextbookLessons();
+}
+
+function mergeTextbookLessons(remote, local) {
+  return Object.fromEntries([...new Set([...Object.keys(remote), ...Object.keys(local)])].sort((a, b) => a.localeCompare(b)).map((key) => {
+    const localEntry = local[key];
+    const remoteEntry = remote[key];
+    return [key, !remoteEntry || (localEntry && localEntry.updatedAt > remoteEntry.updatedAt) ? localEntry : remoteEntry];
+  }));
+}
+
+function adoptTextbookLessons(confirmed) {
+  const merged = mergeTextbookLessons(confirmed, textbookOverrides);
+  if (JSON.stringify(merged) === JSON.stringify(textbookOverrides)) return;
+  for (const [sourceKey, entry] of Object.entries(merged)) {
+    const previousKey = textbookOverrides[sourceKey]?.currentKey || sourceKey;
+    if (previousKey === entry.currentKey) continue;
+    if (selectedLessonKeys.delete(previousKey)) selectedLessonKeys.add(entry.currentKey);
+    if (editingLessonKey === previousKey) editingLessonKey = entry.currentKey;
+  }
+  textbookOverrides = merged;
+  saveTextbookLessons();
+  textbookWords = applyTextbookOverrides(textbookWords);
+  saveTextbookWords();
+  renderTextbook();
+  return true;
+}
+
+function markTextbookLessonsDirty() {
+  textbookLessonRevision += 1;
+  setLessonSyncState(navigator.onLine ? '字表待同步' : '字表离线保存', navigator.onLine ? 'pending' : 'offline');
+  syncTextbookLessons();
+}
+
+function syncTextbookLessons() {
+  if (textbookLessonSyncPromise) return textbookLessonSyncPromise;
+  const config = window.CLOUD_CONFIG;
+  if (!config?.url || !config.publishableKey || !config.textbookProgressId) {
+    setLessonSyncState('字表本地保存', 'offline');
+    return;
+  }
+  if (!navigator.onLine) {
+    setLessonSyncState('字表离线保存', 'offline');
+    return;
+  }
+  // A separate row keeps older clients from overwriting edits when they save progress.
+  const scope = `${config.textbookProgressId}:textbook-lessons-v1`;
+  const endpoint = `${config.url}/rest/v1/family_data`;
+  const rowFilter = `family_id=eq.${encodeURIComponent(scope)}`;
+  const headers = { apikey: config.publishableKey, 'x-family-id': scope, 'Content-Type': 'application/json' };
+  const revision = textbookLessonRevision;
+  textbookLessonSyncPromise = (async () => {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const response = await fetch(`${endpoint}?${rowFilter}&select=payload,updated_at`, { headers, cache: 'no-store' });
+      if (!response.ok) throw new Error(`lesson read ${response.status}`);
+      const [row] = await response.json();
+      const remote = normalizeTextbookLessons(row?.payload?.lessons);
+      const merged = mergeTextbookLessons(remote, textbookOverrides);
+      if (Object.keys(merged).some((key) => merged[key] !== remote[key])) {
+        const payload = { version: 1, lessons: merged };
+        const updatedAt = new Date(Math.max(Date.now(), (Date.parse(row?.updated_at) || 0) + 1)).toISOString();
+        const writeUrl = row
+          ? `${endpoint}?${rowFilter}&updated_at=eq.${encodeURIComponent(row.updated_at)}&select=updated_at`
+          : `${endpoint}?on_conflict=family_id&select=updated_at`;
+        const prefer = row ? 'return=representation' : 'resolution=ignore-duplicates,return=representation';
+        const values = { payload, updated_at: updatedAt };
+        const write = await fetch(writeUrl, {
+          method: row ? 'PATCH' : 'POST',
+          headers: { ...headers, Prefer: prefer },
+          body: JSON.stringify(row ? values : { family_id: scope, ...values }),
+        });
+        if (!write.ok) throw new Error(`lesson write ${write.status}`);
+        if (!(await write.json()).length) continue; // Another device wrote first. Read and merge again.
+      }
+      const changed = adoptTextbookLessons(merged);
+      if (revision === textbookLessonRevision) setLessonSyncState('字表已同步', 'synced');
+      if (changed) syncTextbookStatuses();
+      return;
+    }
+    throw new Error('课时同步发生连续冲突');
+  })().catch((error) => {
+    console.warn('课时字表同步失败，修改仍保存在本机。', error);
+    setLessonSyncState(navigator.onLine ? '字表待重试' : '字表离线保存', navigator.onLine ? 'pending' : 'offline');
+  }).finally(() => {
+    textbookLessonSyncPromise = null;
+    if (revision !== textbookLessonRevision) syncTextbookLessons();
+  });
+  return textbookLessonSyncPromise;
 }
 
 function textbookStatusTimestamp(word) {
@@ -284,7 +445,8 @@ async function loadRemoteTextbookCatalog() {
           reviewCount: previous?.reviewCount || 0,
           createdAt: previous?.createdAt || today(),
           source: 'textbook',
-          catalog: true
+          catalog: true,
+          localOverride: false
         });
       });
     });
@@ -294,29 +456,22 @@ async function loadRemoteTextbookCatalog() {
   } catch (error) {
     console.warn('课本字表同步失败，将继续使用本机数据。', error);
   } finally {
+    await syncTextbookLessons();
     syncTextbookStatuses();
   }
 }
 
 function applyTextbookOverrides(baseWords) {
-  let result = baseWords.slice();
+  const replacedKeys = new Set(Object.entries(textbookOverrides).flatMap(([key, entry]) => [key, entry.currentKey]));
+  const result = baseWords.filter((word) => !word.localOverride && !replacedKeys.has(lessonKey(word)));
+  const previousById = new Map(textbookWords.map((word) => [word.id, word]));
   Object.entries(textbookOverrides).forEach(([sourceKey, override]) => {
-    if (!override || !Array.isArray(override.chars)) return;
-    const currentKey = override.currentKey || `${override.grade}|${override.semester}|${override.unit}`;
-    const previousEntries = textbookWords.filter((word) => {
-      const key = lessonKey(word);
-      return key === sourceKey || key === currentKey;
-    });
-    const previousByChar = new Map(previousEntries.map((word) => [word.char, word]));
-    result = result.filter((word) => {
-      const key = lessonKey(word);
-      return key !== sourceKey && key !== currentKey;
-    });
     override.chars.forEach((char, index) => {
-      const previous = previousByChar.get(char);
+      const id = override.wordIds?.[char] || textbookLessonWordId(sourceKey, char);
+      const previous = previousById.get(id);
       result.push({
         ...previous,
-        id: previous?.id || `override-${override.grade}-${override.semester}-${override.lessonOrder || 9999}-${index}-${char}`,
+        id,
         char,
         grade: Number(override.grade),
         semester: Number(override.semester),
@@ -341,6 +496,7 @@ function levelText(level) {
 }
 
 function showView(id) {
+  const isEnteringTextbook = id === 'textbookView' && !$('#textbookView').classList.contains('active');
   document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === id));
   const isMainView = id === 'homeView' || id === 'textbookView';
   const isEnteringHome = isMainView && !$('#pugRunner').classList.contains('active');
@@ -353,6 +509,7 @@ function showView(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (isEnteringHome) playPugGreeting({ autoplay: true });
   if (!isMainView) stopPugGreeting();
+  if (isEnteringTextbook) syncTextbookLessons();
 }
 
 function stopPugGreeting() {
@@ -503,7 +660,7 @@ function renderTextbook() {
         const lessonOpenKey = `lesson:${key}`;
         const encodedKey = encodeURIComponent(key);
         const lessonName = entries[0].unit || '未分课时';
-        const tiles = entries.map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${word.id}" aria-label="${word.char}，${levelText(word.level)}">
+        const tiles = entries.map((word) => `<button class="word-tile level-${word.level || 0}" data-textbook-id="${escapeHtml(word.id)}" aria-label="${word.char}，${levelText(word.level)}">
           <span class="level-dot"></span><b>${word.char}</b><small>${levelText(word.level)}</small>
         </button>`).join('');
         return `<details class="lesson-card" data-open-key="${escapeHtml(lessonOpenKey)}" ${openKeys.has(lessonOpenKey) || pendingOpenLessonKey === key ? 'open' : ''}><summary class="lesson-card-head"><div><h4>${escapeHtml(lessonName)}</h4><small>${entries.length} 个字</small></div><div class="lesson-actions"><button class="lesson-review-button" type="button" data-review-lesson="${encodedKey}">复习</button><button type="button" data-status-lesson="${encodedKey}">状态</button><button type="button" data-edit-lesson="${encodedKey}">编辑</button></div><span class="lesson-toggle"></span></summary><div class="lesson-select-row"><label class="lesson-checkbox"><input type="checkbox" data-lesson-select="${encodedKey}" ${selectedLessonKeys.has(key) ? 'checked' : ''}><span></span></label><b>选择此课时参加乱序复习</b></div><div class="word-list">${tiles}</div></details>`;
@@ -577,66 +734,41 @@ function addTextbookWords(event) {
   const semester = Number($('#textbookSemester').value);
   const unit = $('#textbookUnit').value.trim();
   if (!unit) return showToast('请填写课时名称');
-  if (editingLessonKey) {
-    const oldEntries = sortTextbookWords(textbookWords.filter((word) => lessonKey(word) === editingLessonKey));
-    const first = oldEntries[0];
-    const oldIds = new Set(oldEntries.map((word) => word.id));
-    const oldByChar = new Map(oldEntries.map((word) => [word.char, word]));
-    const newKey = `${grade}|${semester}|${unit}`;
-    const lessonWasOpen = [...document.querySelectorAll('#textbookWordList details.lesson-card[open]')].some((details) => details.dataset.openKey === `lesson:${editingLessonKey}`);
-    const wasSelected = selectedLessonKeys.delete(editingLessonKey);
-    const replacement = chars.map((char, index) => {
-      const previous = oldByChar.get(char);
-      return {
-        ...previous,
-        id: previous?.id || `tb-${Date.now()}-${index}-${char}`,
-        char,
-        grade,
-        semester,
-        bookUnit: first?.bookUnit || previous?.bookUnit || '自定义课时',
-        unit,
-        lessonOrder: Number(first?.lessonOrder || previous?.lessonOrder || 9999),
-        charOrder: index,
-        level: previous?.level || 0,
-        reviewCount: previous?.reviewCount || 0,
-        createdAt: previous?.createdAt || today(),
-        source: 'textbook',
-        localOverride: true
-      };
-    });
-    textbookWords = [...textbookWords.filter((word) => !oldIds.has(word.id)), ...replacement];
-    const existingOverride = Object.entries(textbookOverrides).find(([sourceKey, override]) => sourceKey === editingLessonKey || override?.currentKey === editingLessonKey);
-    const overrideSourceKey = existingOverride?.[0] || editingLessonKey;
-    if (existingOverride) delete textbookOverrides[existingOverride[0]];
-    textbookOverrides[overrideSourceKey] = {
-      currentKey: newKey,
-      grade,
-      semester,
-      bookUnit: first?.bookUnit || '自定义课时',
-      unit,
-      lessonOrder: Number(first?.lessonOrder || 9999),
-      chars
-    };
-    localStorage.setItem(TEXTBOOK_OVERRIDES_KEY, JSON.stringify(textbookOverrides));
-    if (wasSelected) selectedLessonKeys.add(newKey);
-    saveTextbookWords();
-    if (lessonWasOpen) pendingOpenLessonKey = newKey;
-    editingLessonKey = null;
-    renderTextbook();
-    closeDialog($('#textbookDialog'));
-    showToast('课时已按输入顺序全量保存');
-    return;
+  const isEditing = Boolean(editingLessonKey);
+  const newKey = `${grade}|${semester}|${unit}`;
+  const oldKey = editingLessonKey || newKey;
+  const existingSource = Object.keys(textbookOverrides).find((key) => textbookOverrides[key].currentKey === oldKey);
+  if ((newKey !== oldKey && textbookWords.some((word) => lessonKey(word) === newKey)) ||
+      (textbookOverrides[newKey] && textbookOverrides[newKey].currentKey !== newKey && newKey !== existingSource)) {
+    return showToast('这个课时名称已被使用，请换一个名称');
   }
+  const oldEntries = sortTextbookWords(textbookWords.filter((word) => lessonKey(word) === oldKey));
+  if (isEditing && !oldEntries.length) return showToast('课时已更新，请重新打开后编辑');
+  const sourceKey = existingSource || oldKey;
+  const oldByChar = new Map(oldEntries.map((word) => [word.char, word]));
+  const lessonChars = isEditing ? chars : [...new Set([...oldByChar.keys(), ...chars])];
+  const lessonWasOpen = [...document.querySelectorAll('#textbookWordList details.lesson-card[open]')].some((details) => details.dataset.openKey === `lesson:${oldKey}`);
   const existingOrders = textbookWords.filter((word) => word.grade === grade && word.semester === semester).map((word) => Number(word.lessonOrder || 0));
-  const lessonOrder = Math.max(0, ...existingOrders) + 1;
-  chars.forEach((char, index) => {
-    textbookWords.push({ id: `tb-${Date.now()}-${index}-${char}`, char, grade, semester, bookUnit: '自定义课时', unit, lessonOrder, charOrder: index, level: 0, reviewCount: 0, createdAt: today(), source: 'textbook' });
-  });
+  const previousEdit = Date.parse(textbookOverrides[sourceKey]?.updatedAt) || 0;
+  textbookOverrides = normalizeTextbookLessons({ ...textbookOverrides, [sourceKey]: {
+    grade, semester, unit,
+    bookUnit: oldEntries[0]?.bookUnit || '自定义课时',
+    lessonOrder: oldEntries[0]?.lessonOrder || Math.max(0, ...existingOrders) + 1,
+    chars: lessonChars,
+    wordIds: Object.fromEntries(lessonChars.map((char) => [char, oldByChar.get(char)?.id || textbookLessonWordId(sourceKey, char)])),
+    updatedAt: new Date(Math.max(Date.now(), previousEdit + 1)).toISOString(),
+  } });
+  textbookWords = applyTextbookOverrides(textbookWords);
+  saveTextbookLessons();
   saveTextbookWords();
+  if (selectedLessonKeys.delete(oldKey)) selectedLessonKeys.add(newKey);
+  if (lessonWasOpen) pendingOpenLessonKey = newKey;
+  editingLessonKey = null;
   renderTextbook();
   closeDialog($('#textbookDialog'));
   $('#textbookForm').reset();
-  showToast(`已按输入顺序录入 ${chars.length} 个课本生字`);
+  markTextbookLessonsDirty();
+  showToast(isEditing ? '课时字表已保存' : `已录入 ${lessonChars.length - oldByChar.size} 个课本生字`);
 }
 
 function startTextbookReview() {
@@ -1659,8 +1791,20 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').then((registration) => registration.update()).catch(() => {});
 }
 navigator.storage?.persist?.().catch(() => {});
-window.addEventListener('online', syncTextbookStatuses);
-window.addEventListener('offline', () => setStatusSyncState('离线保存', 'offline'));
+window.addEventListener('online', async () => {
+  await syncTextbookLessons();
+  syncTextbookStatuses();
+});
+window.addEventListener('offline', () => {
+  setStatusSyncState('离线保存', 'offline');
+  setLessonSyncState('字表离线保存', 'offline');
+});
+function refreshVisibleTextbookLessons() {
+  if (!document.hidden && $('#textbookView').classList.contains('active')) syncTextbookLessons();
+}
+document.addEventListener('visibilitychange', refreshVisibleTextbookLessons);
+setInterval(refreshVisibleTextbookLessons, 20000);
+migrateLocalTextbookLessons();
 renderHome();
 renderTextbook();
 showView('textbookView');
