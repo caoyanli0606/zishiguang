@@ -80,7 +80,9 @@ let activeFeedbackAudio = null;
 let neuralAudioContext = null;
 let activeNeuralSource = null;
 let neuralSpeechRequest = 0;
-const announcedTtsQueue = new Set();
+const preparedNeuralAudio = new Map();
+const neuralAudioLookups = new Map();
+const queuedNeuralAudio = new Set();
 
 const getHistory = () => JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 
@@ -722,6 +724,7 @@ function renderCard({ preserveMode = false } = {}) {
   $('#shuffleCurrentLesson').hidden = reviewScope !== 'lesson' || queue.length < 2 || reviewedCount > 0;
   $('#revealPrompt').textContent = '先自己读一读，再点卡片听读音和看提示';
   if (queueIndex === 0 && !preserveMode) prepareReviewModes();
+  preloadNeuralAudio(getStudySpeechText(word.char));
 }
 
 function getPinyin(char) {
@@ -882,7 +885,7 @@ function shuffleCurrentLesson() {
 
 function showNextCard() {
   if (!queue.length) return;
-  window.speechSynthesis?.cancel();
+  stopStudySpeech();
   const reachedEnd = queueIndex >= queue.length - 1;
   queueIndex = reachedEnd ? 0 : queueIndex + 1;
   renderCard();
@@ -890,10 +893,14 @@ function showNextCard() {
 }
 
 function switchReviewMode(mode) {
+  stopStudySpeech();
   document.querySelectorAll('[data-review-mode]').forEach((button) => button.classList.toggle('active', button.dataset.reviewMode === mode));
   document.querySelectorAll('.review-mode-panel').forEach((panel) => panel.classList.remove('active'));
   $(`#${mode}ModePanel`).classList.add('active');
-  if (mode === 'overview') renderReviewOverview();
+  if (mode === 'overview') {
+    renderReviewOverview();
+    uniqueQueueWords().slice(0, 6).forEach((word) => preloadNeuralAudio(getStudySpeechText(word.char)));
+  }
   if (mode === 'pair') renderPairGroup();
   if (mode === 'listen') startListenRound();
   if (mode === 'sentence') startSentenceRound();
@@ -1000,13 +1007,14 @@ function nextPairGroup() {
 }
 
 function startListenRound() {
+  if (!$('#reviewView').classList.contains('active') || !$('#listenModePanel').classList.contains('active')) return;
   const entries = shuffled(uniqueQueueWords());
   const choices = entries.slice(0, Math.min(4, entries.length));
   if (!choices.length) return;
   listenTarget = choices[Math.floor(Math.random() * choices.length)];
   $('#listenChoices').innerHTML = shuffled(choices).map((word) => `<button type="button" class="listen-choice" data-listen-char="${word.char}">${word.char}</button>`).join('');
   $('#listenFeedback').textContent = '仔细听，再选择对应的汉字';
-  setTimeout(playListenTarget, 180);
+  playListenTarget();
 }
 
 function playListenTarget() {
@@ -1023,7 +1031,9 @@ function handleListenChoice(event) {
     $('#listenScore').textContent = `答对 ${listenScore} 个`;
     speakFeedback('Bingo');
     listenTarget = null;
-    setTimeout(startListenRound, 900);
+    setTimeout(() => {
+      if (!listenTarget) startListenRound();
+    }, 1080);
   } else {
     button.classList.add('wrong');
     $('#listenFeedback').textContent = '再听一次，慢慢找';
@@ -1113,15 +1123,17 @@ function speakGameText(text) {
   speakNeuralText(text);
 }
 
-function speakSystemText(text, { onstart, onend } = {}) {
-  if (!('speechSynthesis' in window)) return onend?.();
+function speakSystemText(text, { onstart, onend, onerror }) {
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return onerror('unavailable');
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'zh-CN';
   utterance.rate = 0.72;
   utterance.pitch = 1;
   applySelectedVoice(utterance);
   utterance.onstart = onstart || null;
-  utterance.onend = utterance.onerror = onend || null;
+  utterance.onend = onend || null;
+  utterance.onerror = (event) => onerror(event.error);
+  if (window.speechSynthesis.paused) window.speechSynthesis.resume();
   window.speechSynthesis.speak(utterance);
 }
 
@@ -1130,31 +1142,56 @@ async function neuralCacheKey(text) {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function getNeuralAudio(text) {
-  const config = window.CLOUD_CONFIG || {};
-  if (!config.url || !config.publishableKey || !config.textbookProgressId) throw new Error('语音云端尚未配置');
-  const key = await neuralCacheKey(text);
-  const audioResponse = await fetch(`./assets/generated-tts/${key}.mp3`, { cache: 'no-store' });
-  if (audioResponse.ok) return audioResponse.arrayBuffer();
-  if (audioResponse.status !== 404) throw new Error(`男孩语音读取失败：${audioResponse.status}`);
+function prepareNeuralAudio(text) {
+  if (preparedNeuralAudio.has(text)) return Promise.resolve(null);
+  if (neuralAudioLookups.has(text)) return neuralAudioLookups.get(text);
 
-  const queueResponse = await fetch(`${config.url}/rest/v1/tts_queue?on_conflict=id`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: config.publishableKey,
-      Authorization: `Bearer ${config.publishableKey}`,
-      'x-family-id': config.textbookProgressId,
-      Prefer: 'resolution=ignore-duplicates,return=minimal',
-    },
-    body: JSON.stringify({ id: key, family_id: config.textbookProgressId, text, status: 'pending' }),
-  });
-  if (!queueResponse.ok && queueResponse.status !== 409) throw new Error(`男孩语音排队失败：${queueResponse.status}`);
-  if (!announcedTtsQueue.has(key)) {
-    announcedTtsQueue.add(key);
-    showToast('男孩语音正在生成，首次暂用系统读音');
+  const lookup = (async () => {
+    const key = await neuralCacheKey(text);
+    const response = await fetch(`./assets/generated-tts/${key}.mp3`, { cache: 'no-store' });
+    if (response.status === 404) return key;
+    if (!response.ok || !response.headers.get('Content-Type')?.startsWith('audio/')) {
+      throw new Error(`男孩语音读取失败：${response.status}`);
+    }
+    const audio = await response.arrayBuffer();
+    if (!audio.byteLength) throw new Error('男孩语音文件为空');
+    if (preparedNeuralAudio.size >= 24) {
+      preparedNeuralAudio.delete(preparedNeuralAudio.keys().next().value);
+    }
+    preparedNeuralAudio.set(text, audio);
+    return null;
+  })().finally(() => neuralAudioLookups.delete(text));
+
+  neuralAudioLookups.set(text, lookup);
+  return lookup;
+}
+
+function preloadNeuralAudio(text) {
+  if (window.AudioContext || window.webkitAudioContext) prepareNeuralAudio(text).catch(() => {});
+}
+
+async function queueNeuralAudio(text, key) {
+  const config = window.CLOUD_CONFIG || {};
+  if (!config.url || !config.publishableKey || !config.textbookProgressId || queuedNeuralAudio.has(key)) return false;
+  queuedNeuralAudio.add(key);
+  try {
+    const response = await fetch(`${config.url}/rest/v1/tts_queue?on_conflict=id`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${config.publishableKey}`,
+        'x-family-id': config.textbookProgressId,
+        Prefer: 'resolution=ignore-duplicates,return=minimal',
+      },
+      body: JSON.stringify({ id: key, family_id: config.textbookProgressId, text, status: 'pending' }),
+    });
+    if (!response.ok && response.status !== 409) throw new Error(`男孩语音排队失败：${response.status}`);
+    return true;
+  } catch (error) {
+    queuedNeuralAudio.delete(key);
+    throw error;
   }
-  throw new Error('男孩语音已加入生成队列');
 }
 
 function stopNeuralAudio() {
@@ -1163,38 +1200,71 @@ function stopNeuralAudio() {
   activeNeuralSource = null;
 }
 
-async function speakNeuralText(text, callbacks = {}) {
-  const requestId = ++neuralSpeechRequest;
-  stopFeedbackAudio();
+function stopStudySpeech() {
+  neuralSpeechRequest += 1;
   stopNeuralAudio();
   window.speechSynthesis?.cancel();
+  $('#wordCard').classList.remove('speaking');
+}
+
+async function playPreparedNeuralAudio(audio, requestId, callbacks) {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return speakSystemText(text, callbacks);
   neuralAudioContext ||= new AudioContextClass();
-  try {
-    await neuralAudioContext.resume();
-    const audioData = await getNeuralAudio(text);
-    if (requestId !== neuralSpeechRequest) return;
-    const buffer = await neuralAudioContext.decodeAudioData(audioData.slice(0));
-    if (requestId !== neuralSpeechRequest) return;
-    const source = neuralAudioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(neuralAudioContext.destination);
-    source.onended = () => {
-      if (activeNeuralSource === source) activeNeuralSource = null;
+  if (neuralAudioContext.state !== 'running') await neuralAudioContext.resume();
+  if (requestId !== neuralSpeechRequest) return;
+  const buffer = await neuralAudioContext.decodeAudioData(audio.slice(0));
+  if (requestId !== neuralSpeechRequest) return;
+  const source = neuralAudioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(neuralAudioContext.destination);
+  source.onended = () => {
+    if (activeNeuralSource === source) activeNeuralSource = null;
+    if (requestId === neuralSpeechRequest) callbacks.onend?.();
+  };
+  source.start(0);
+  activeNeuralSource = source;
+  callbacks.onstart?.();
+}
+
+function speakNeuralText(text, callbacks = {}) {
+  if (!text) return;
+  stopFeedbackAudio();
+  stopStudySpeech();
+  const requestId = neuralSpeechRequest;
+  let systemSpeechFailed = false;
+  const playSystemVoice = () => speakSystemText(text, {
+    onstart: () => { if (requestId === neuralSpeechRequest) callbacks.onstart?.(); },
+    onend: () => { if (requestId === neuralSpeechRequest) callbacks.onend?.(); },
+    onerror: (reason) => {
+      if (requestId !== neuralSpeechRequest) return;
       callbacks.onend?.();
-    };
-    activeNeuralSource = source;
-    callbacks.onstart?.();
-    source.start(0);
-  } catch (error) {
-    console.warn('男孩神经语音暂不可用，使用系统语音', error);
-    if (requestId === neuralSpeechRequest) speakSystemText(text, callbacks);
+      if (reason === 'canceled' || reason === 'interrupted') return;
+      systemSpeechFailed = true;
+      showToast(reason === 'not-allowed' ? '请再点一次播放读音' : '系统朗读不可用，请检查设备的中文音色');
+    },
+  });
+  if (!window.AudioContext && !window.webkitAudioContext) return playSystemVoice();
+
+  const audio = preparedNeuralAudio.get(text);
+  if (audio) {
+    playPreparedNeuralAudio(audio, requestId, callbacks).catch(() => {
+      preparedNeuralAudio.delete(text);
+      if (requestId === neuralSpeechRequest) playSystemVoice();
+    });
+    return;
   }
+
+  // Some browsers allow the system voice only during the original tap.
+  // Fetch and enqueue independently so the fallback starts while that tap is active.
+  playSystemVoice();
+  prepareNeuralAudio(text).then(async (key) => {
+    if (key && await queueNeuralAudio(text, key) && requestId === neuralSpeechRequest && !systemSpeechFailed) {
+      showToast('男孩语音正在生成，暂用系统读音');
+    }
+  }).catch((error) => console.warn('男孩语音暂不可用', error));
 }
 
 function rateWord(level) {
-  window.speechSynthesis?.cancel();
   if (level === 3) speakFeedback('圈圈，你真是太棒了');
   if (level === 2) speakFeedback('很好，圈圈，下次就认识了');
   if (level === 1) speakFeedback('圈圈，你要加油哦，我相信你');
@@ -1272,9 +1342,7 @@ function speakStudyChar(char) {
 }
 
 function speakFeedback(message) {
-  window.speechSynthesis?.cancel();
-  neuralSpeechRequest += 1;
-  stopNeuralAudio();
+  stopStudySpeech();
   stopFeedbackAudio();
   const source = FEEDBACK_AUDIO_FILES[message];
   if (source) {
@@ -1393,6 +1461,8 @@ function reviewTodayAgain() {
 }
 
 function returnFromReview() {
+  stopStudySpeech();
+  stopFeedbackAudio();
   const target = reviewContext === 'textbook' ? 'textbookView' : 'homeView';
   showView(target);
   if (target === 'textbookView') renderTextbook();
@@ -1414,6 +1484,7 @@ $('#speakWordExample').checked = speakWordExample;
 $('#speakWordExample').addEventListener('change', (event) => {
   speakWordExample = event.target.checked;
   localStorage.setItem(SPEAK_WORD_EXAMPLE_KEY, String(speakWordExample));
+  if (queue[queueIndex]) preloadNeuralAudio(getStudySpeechText(queue[queueIndex].char));
 });
 $('#enableVolcanoAnimation').checked = volcanoAnimationEnabled;
 $('#enableVolcanoAnimation').addEventListener('change', (event) => {
@@ -1432,6 +1503,12 @@ $('#reviewOverviewGrid').addEventListener('click', (event) => {
   const button = event.target.closest('[data-overview-char]');
   if (button) speakStudyChar(button.dataset.overviewChar);
 });
+function preloadOverviewWord(event) {
+  const button = event.target.closest('[data-overview-char]');
+  if (button && !button.contains(event.relatedTarget)) preloadNeuralAudio(getStudySpeechText(button.dataset.overviewChar));
+}
+$('#reviewOverviewGrid').addEventListener('pointerover', preloadOverviewWord);
+$('#reviewOverviewGrid').addEventListener('focusin', preloadOverviewWord);
 $('#toggleOverviewPinyin').addEventListener('click', toggleOverviewPinyin);
 $('#editCurrentWords').addEventListener('click', (event) => {
   event.stopPropagation();
