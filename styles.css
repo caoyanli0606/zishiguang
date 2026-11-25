@@ -344,7 +344,10 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
 
 .pug-runner { position: fixed; inset: auto 0 calc(82px + env(safe-area-inset-bottom)); z-index: 6; height: 100px; overflow: hidden; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .25s; }
 .pug-runner.active { opacity: 1; visibility: visible; }
-.pug-runner img { position: absolute; bottom: 0; left: 0; width: 98px; height: 88px; object-fit: cover; object-position: center 45%; border-radius: 26px; filter: drop-shadow(0 7px 7px rgba(65,48,29,.2)); mix-blend-mode: multiply; will-change: transform; animation: pugCrossScreen 13s linear infinite; }
+.pug-runner-button { position: absolute; bottom: 0; left: 0; width: 98px; height: 88px; padding: 0; border: 0; border-radius: 26px; background: transparent; cursor: pointer; filter: drop-shadow(0 7px 7px rgba(65,48,29,.2)); mix-blend-mode: multiply; will-change: transform; animation: pugCrossScreen 13s linear infinite; }
+.pug-runner.active .pug-runner-button { pointer-events: auto; }
+.pug-runner-button img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 45%; border-radius: inherit; }
+.pug-runner-button:focus-visible { left: 50%; transform: translateX(-50%); animation: none; outline: 2px solid var(--red-dark); outline-offset: -2px; }
 @keyframes pugCrossScreen {
   0% { transform: translate3d(calc(100vw + 24px),2px,0) rotate(1deg); }
   12% { transform: translate3d(calc(88vw - 12px),-3px,0) rotate(-1deg); }
@@ -356,5 +359,5 @@ input, textarea { width: 100%; padding: 13px 14px; border: 1px solid #ded6c9; bo
   88% { transform: translate3d(calc(12vw - 86px),-3px,0) rotate(-1deg); }
   100% { transform: translate3d(-122px,2px,0) rotate(1deg); }
 }
-@media (min-width:720px) { .pug-runner { height:116px; }.pug-runner img { width:118px; height:106px; } }
-@media (prefers-reduced-motion:reduce) { .pug-runner img { animation-duration:26s; } }
+@media (min-width:720px) { .pug-runner { height:116px; }.pug-runner-button { width:118px; height:106px; } }
+@media (prefers-reduced-motion:reduce) { .pug-runner-button { animation-duration:26s; } }

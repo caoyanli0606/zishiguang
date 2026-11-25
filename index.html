@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=56" />
+  <link rel="stylesheet" href="styles.css?v=57" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -202,7 +202,12 @@
       </div>
     </section>
 
-    <div class="pug-runner" id="pugRunner" aria-hidden="true"><img src="assets/pug-runner.png" alt="" /></div>
+    <div class="pug-runner" id="pugRunner">
+      <button class="pug-runner-button" id="pugGreeting" type="button" aria-label="听皮皮打招呼">
+        <img src="assets/pug-runner.png" alt="" />
+      </button>
+    </div>
+    <audio id="pugGreetingAudio" src="assets/voice-pack/pipi-welcome-boy-c.mp3" preload="auto"></audio>
 
     <nav class="main-nav" id="mainNav" aria-label="主要功能">
       <button id="homeNav" type="button"><span>◉</span><b>今日</b></button>
@@ -306,7 +311,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=56"></script>
-  <script src="app.js?v=56"></script>
+  <script src="cloud-config.js?v=57"></script>
+  <script src="app.js?v=57"></script>
 </body>
 </html>
