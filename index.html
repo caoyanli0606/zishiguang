@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="字时光" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=64" />
+  <link rel="stylesheet" href="styles.css?v=65" />
   <title>字时光 · 识字复习</title>
 </head>
 <body>
@@ -71,9 +71,10 @@
         <div class="review-progress">
           <div class="progress-track" aria-hidden="true"><div id="progressBar"></div></div>
           <span class="progress-pill" id="reviewProgress">1 / 1</span>
+          <small id="reviewSessionScope" class="review-session-scope">先回忆，再翻卡确认</small>
         </div>
         <div class="review-summary-tools">
-          <button class="shuffle-current-button" id="shuffleCurrentLesson" type="button" hidden>⇄ 打乱本课</button>
+          <button class="shuffle-current-button" id="shuffleCurrentLesson" type="button" hidden>⇄ 打乱本组</button>
           <label class="review-speech-switch" for="speakWordExample">
             <span>点读带组词</span>
             <input id="speakWordExample" type="checkbox" role="switch" />
@@ -82,12 +83,20 @@
         <div class="session-numbers"><b id="reviewedCountDisplay">0</b><small>已完成</small><i></i><b id="remainingCount">0</b><small>待复习</small></div>
       </div>
 
-      <div class="review-mode-tabs" role="tablist" aria-label="复习方式">
-        <button class="active" type="button" data-review-mode="card">单字卡</button>
-        <button type="button" data-review-mode="overview">字表</button>
-        <button type="button" data-review-mode="pair">拼音配对</button>
-        <button type="button" data-review-mode="listen">听音找字</button>
-        <button type="button" data-review-mode="sentence">句子还原</button>
+      <div>
+        <div id="lessonPracticeToolbar" class="lesson-practice-toolbar" hidden>
+          <button id="openLessonPracticeCount" type="button" aria-haspopup="dialog"><span>复习字数</span><b id="currentLessonPracticeCount"></b><span class="practice-chevron" aria-hidden="true"></span></button>
+          <button id="openLessonPracticeType" type="button" aria-haspopup="dialog"><span>复习类型</span><b id="currentLessonPracticeType"></b><span class="practice-chevron" aria-hidden="true"></span></button>
+        </div>
+
+        <div class="review-mode-tabs" role="tablist" aria-label="复习方式">
+          <button class="active" type="button" data-review-mode="card">单字卡</button>
+          <button type="button" data-review-mode="overview">字表</button>
+          <button type="button" data-review-mode="pair">拼音配对</button>
+          <button type="button" data-review-mode="listen">听音找字</button>
+          <button type="button" data-review-mode="read">开口读</button>
+          <button type="button" data-review-mode="sentence">句子还原</button>
+        </div>
       </div>
 
       <div id="cardModePanel" class="review-mode-panel active">
@@ -159,6 +168,29 @@
         <p id="listenFeedback" class="listen-feedback">点击喇叭听读音，再选择汉字</p>
       </section>
 
+      <section id="readModePanel" class="review-mode-panel game-panel read-practice-panel" aria-labelledby="readPracticeTitle">
+        <div class="game-heading"><h2 id="readPracticeTitle">开口读</h2><span id="readPracticeProgress"></span></div>
+        <div class="read-practice-board" id="readPracticeBoard">
+          <div class="read-practice-card">
+            <strong id="readPracticeChar" class="read-practice-char"></strong>
+            <button id="playReadPracticeExample" class="read-practice-example" type="button">听示范</button>
+            <p id="readPracticeHint" class="read-practice-hint" hidden></p>
+          </div>
+          <div class="read-practice-controls">
+            <ol class="read-practice-steps" aria-label="练习步骤">
+              <li id="readPracticeCharStep">读字</li><li id="readPracticeWordStep">说词</li>
+            </ol>
+            <h3 id="readPracticePrompt">读一读这个字</h3>
+            <button id="recordReadPractice" class="read-practice-record" type="button"><span aria-hidden="true">🎙</span><span id="readPracticeRecordLabel">开始录音</span></button>
+            <p id="readPracticeDisclosure" class="read-practice-disclosure">语音由浏览器的识别服务处理，识别结果仅用于本轮练习。</p>
+            <p id="readPracticeFeedback" class="read-practice-feedback" role="status"></p>
+            <button id="addRecognizedStudyWord" class="read-practice-example" type="button" hidden>确认并补充组词</button>
+          </div>
+        </div>
+        <div id="readPracticeComplete" class="read-practice-complete" hidden><h3>本组练完啦！</h3><p id="readPracticeSummary"></p></div>
+        <button id="advanceReadPractice" class="read-practice-advance" type="button">继续说词 →</button>
+      </section>
+
       <section id="sentenceModePanel" class="review-mode-panel game-panel sentence-game-panel">
         <div class="game-heading"><div><p class="eyebrow">组词造句</p><h2>把打乱的文字还原成句子</h2></div><span id="sentenceProgress">0 个句子</span></div>
         <div id="sentenceGameEmpty" class="sentence-game-empty" hidden><span>✎</span><b>还没有可练习的句子</b><small>请先在单字卡或字表中补充组词并保存例句。</small></div>
@@ -177,6 +209,7 @@
       <p class="eyebrow">今日完成</p>
       <h2>每次见面，<br />都会更熟一点。</h2>
       <p id="completeSummary"></p>
+      <button class="primary-button" id="nextLessonPractice" type="button" hidden>继续下一组</button>
       <button class="primary-button" id="reviewAgain">再复习一遍</button>
       <button class="primary-button" id="backHome">回到首页</button>
     </section>
@@ -188,9 +221,10 @@
         <div class="book-mark">课</div>
       </div>
       <div class="textbook-summary">
-        <span>全部课本共 <b id="filteredTextbookCount">0</b> 个字</span>
-        <span class="textbook-status-counts"><i>已认识 <b id="knownTextbookCount">0</b></i><i>重点 <b id="focusTextbookCount">0</b></i><small id="statusSyncState">本地保存</small><small id="lessonSyncState">字表本地保存</small></span>
+        <b>全部课本</b>
+        <span class="textbook-status-counts"><small id="statusSyncState">本地保存</small><small id="lessonSyncState">字表本地保存</small></span>
       </div>
+      <div id="textbookPracticeCounts" class="practice-stats textbook-practice-stats" role="group" aria-label="全部课本按熟悉度复习"></div>
       <button class="primary-button textbook-review-button" id="startTextbookReview" type="button">按顺序复习全部识字表</button>
       <div class="lesson-review-tools" id="lessonReviewTools" hidden>
         <div><b>组合课时</b><span>已选 <strong id="selectedLessonCount">0</strong> 个课时</span></div>
@@ -306,6 +340,35 @@
     </form>
   </dialog>
 
+  <dialog id="lessonPracticeDialog" class="lesson-practice-dialog" aria-labelledby="lessonPracticeTitle">
+    <form id="lessonPracticeForm" method="dialog">
+      <div class="dialog-head">
+        <div><p class="eyebrow" id="lessonPracticeBook"></p><h2 id="lessonPracticeTitle">课时复习</h2></div>
+        <button type="button" class="close-button" id="closeLessonPractice" aria-label="关闭复习设置">×</button>
+      </div>
+      <div id="lessonPracticeLevels" class="lesson-practice-levels" role="group" aria-label="复习分类">
+        <button type="button" data-lesson-practice-level="all"><span>全部</span><b>0</b></button>
+        <button type="button" class="practice-level-1" data-lesson-practice-level="1"><span>再练练</span><b>0</b></button>
+        <button type="button" class="practice-level-2" data-lesson-practice-level="2"><span>有点熟</span><b>0</b></button>
+        <button type="button" class="practice-level-3" data-lesson-practice-level="3"><span>已认识</span><b>0</b></button>
+      </div>
+      <div id="lessonPracticeSize">
+        <label for="lessonPracticeCount">每组最多复习几个字？</label>
+        <div class="lesson-practice-controls">
+          <div id="lessonPracticePresets" class="lesson-practice-presets" role="group" aria-label="常用字数">
+            <button type="button" data-lesson-practice-limit="3">3 个</button>
+            <button type="button" data-lesson-practice-limit="5">5 个</button>
+            <button type="button" data-lesson-practice-limit="8">8 个</button>
+            <button type="button" data-lesson-practice-limit="all">不限</button>
+          </div>
+          <input id="lessonPracticeCount" type="number" min="1" step="1" inputmode="numeric" required />
+        </div>
+      </div>
+      <div class="lesson-practice-preview"><p id="lessonPracticePreview" aria-live="polite"></p><button type="button" id="restartLessonPractice" hidden>从头开始</button></div>
+      <button class="primary-button" id="beginLessonPractice" type="submit">应用</button>
+    </form>
+  </dialog>
+
   <dialog id="textbookStatusDialog" class="status-dialog">
     <form method="dialog">
       <div class="dialog-head">
@@ -315,7 +378,8 @@
       <p id="statusScopeText" class="status-scope-text"></p>
       <div class="status-choice-list">
         <button type="button" data-apply-status="3"><span>✓</span><b>设为已认识</b><small>计入首页“已认识”数量</small></button>
-        <button type="button" data-apply-status="1"><span>★</span><b>标记重点复习</b><small>醒目标记，复习时重点关注</small></button>
+        <button type="button" data-apply-status="1"><span>★</span><b>设为再练练</b><small>标记为重点复习</small></button>
+        <button type="button" data-apply-status="2"><span>≈</span><b>设为有点熟</b><small>计入“有点熟”数量</small></button>
         <button type="button" data-apply-status="0"><span>○</span><b>设为未认识</b><small>从已认识数量中移除</small></button>
       </div>
     </form>
@@ -325,7 +389,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar@3.2.6/cnchar.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cnchar-words@3.2.6/cnchar.words.min.js"></script>
-  <script src="cloud-config.js?v=64"></script>
-  <script src="app.js?v=64"></script>
+  <script src="cloud-config.js?v=65"></script>
+  <script src="app.js?v=65"></script>
 </body>
 </html>

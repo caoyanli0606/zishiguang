@@ -1,10 +1,10 @@
-const CACHE = 'zishiguang-v64';
+const CACHE = 'zishiguang-v65';
 const GENERATED_AUDIO_CACHE = 'zishiguang-generated-audio-v1';
 const GENERATED_AUDIO_PATH = new URL('./assets/generated-tts/', self.registration.scope).pathname;
 const REPOSITORY_AUDIO_URL = 'https://raw.githubusercontent.com/caoyanli0606/zishiguang/main/assets/generated-tts/';
 const PUG_GREETING_FILE = './assets/voice-pack/pipi-welcome-boy-c.mp3';
 const PUG_GREETING_URL = new URL(PUG_GREETING_FILE, self.registration.scope).href;
-const FILES = ['./', './index.html', './styles.css?v=64', './cloud-config.js?v=64', './app.js?v=64', './manifest.webmanifest', './assets/pug-runner.png', './assets/pipi-volcano.webp', PUG_GREETING_FILE, './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
+const FILES = ['./', './index.html', './styles.css?v=65', './cloud-config.js?v=65', './app.js?v=65', './manifest.webmanifest', './assets/pug-runner.png', './assets/pipi-volcano.webp', PUG_GREETING_FILE, './assets/voice-pack/bingo-boy-c.mp3?v=53', './assets/voice-pack/known-boy-c.mp3?v=53', './assets/voice-pack/familiar-boy-c.mp3?v=53', './assets/voice-pack/again-boy-c.mp3?v=53', './assets/voice-pack/pair-complete.mp3', './assets/voice-pack/round-complete.mp3', './assets/voice-pack/listen-again.mp3', './assets/voice-pack/sentence-complete.mp3'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));

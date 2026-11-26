@@ -4,6 +4,12 @@ const REVIEW_LOG_KEY = 'zishiguang-review-log-v1';
 const TEXTBOOK_KEY = 'zishiguang-textbook-v1';
 const TEXTBOOK_CATALOG_ID = 'textbook-catalog-v1';
 const TEXTBOOK_OVERRIDES_KEY = 'zishiguang-textbook-overrides-v1';
+const LESSON_PRACTICE_KEY = 'zishiguang-lesson-practice-v1';
+const PRACTICE_LEVELS = [
+  { level: 1, label: '再练练' },
+  { level: 2, label: '有点熟' },
+  { level: 3, label: '已认识' },
+];
 const LEGACY_TEXTBOOK_EDIT_TIME = '2000-01-01T00:00:00.000Z';
 const TEXTBOOK_STATUS_DIRTY_KEY = 'zishiguang-textbook-status-dirty-v1';
 const VOICE_KEY = 'zishiguang-voice-v1';
@@ -56,6 +62,10 @@ let textbookWords = JSON.parse(localStorage.getItem(TEXTBOOK_KEY) || '[]');
 let textbookOverrides = JSON.parse(localStorage.getItem(TEXTBOOK_OVERRIDES_KEY) || '{}');
 let reviewContext = 'daily';
 let reviewScope = 'all';
+let reviewScopeLabel = '';
+let lessonPracticeSetup = null;
+let lessonPracticeBatch = null;
+const lessonPracticePreferences = JSON.parse(localStorage.getItem(LESSON_PRACTICE_KEY) || '{}') || {};
 let selectedLessonKeys = new Set();
 let editingLessonKey = null;
 let pendingOpenLessonKey = null;
@@ -63,6 +73,9 @@ let pairGroupIndex = 0;
 let selectedPairChar = null;
 let listenTarget = null;
 let listenScore = 0;
+const BrowserSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let readPractice = null;
+let readRecording = null;
 let manualStudyWords = JSON.parse(localStorage.getItem(MANUAL_WORDS_KEY) || '{}');
 let overviewPinyinHidden = localStorage.getItem(OVERVIEW_PINYIN_KEY) === 'true';
 let studySentences = JSON.parse(localStorage.getItem(SENTENCES_KEY) || '[]');
@@ -497,6 +510,10 @@ function levelText(level) {
 }
 
 function showView(id) {
+  if (id !== 'reviewView') {
+    stopReadPracticeRecording();
+    readPractice = null;
+  }
   const isEnteringTextbook = id === 'textbookView' && !$('#textbookView').classList.contains('active');
   document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === id));
   document.body.classList.toggle('review-page', id === 'reviewView');
@@ -598,6 +615,30 @@ function lessonKey(word) {
   return `${word.grade}|${word.semester}|${word.unit || '未分课时'}`;
 }
 
+function textbookBookKey(word) {
+  return `${word.grade}-${word.semester}`;
+}
+
+function practiceLevelLabel(level) {
+  return PRACTICE_LEVELS.find((item) => item.level === level)?.label || '全部';
+}
+
+function getPracticeCounts(entries) {
+  const counts = [0, 0, 0, 0];
+  for (const word of entries) {
+    const level = Number(word.level);
+    counts[[1, 2, 3].includes(level) ? level : 0] += 1;
+  }
+  return counts;
+}
+
+function renderPracticeCounts(entries, bookKey = '') {
+  const counts = getPracticeCounts(entries);
+  return PRACTICE_LEVELS.map(({ level, label }) => (
+    `<button class="practice-count practice-level-${level}" type="button" data-practice-level="${level}" data-practice-book="${escapeHtml(bookKey)}" ${counts[level] ? '' : 'disabled'} aria-label="复习${label}的字，${counts[level]} 个"><span>${label}</span><b>${counts[level]}</b></button>`
+  )).join('');
+}
+
 function sortTextbookWords(entries) {
   return entries.slice().sort((a, b) => Number(a.grade) - Number(b.grade)
     || Number(a.semester) - Number(b.semester)
@@ -625,14 +666,12 @@ function renderTextbook() {
   const openKeys = new Set([...document.querySelectorAll('#textbookWordList details[open][data-open-key]')].map((details) => details.dataset.openKey));
   const filtered = sortTextbookWords(getFilteredTextbookWords());
   $('#textbookTotal').textContent = textbookWords.length;
-  $('#filteredTextbookCount').textContent = filtered.length;
-  $('#knownTextbookCount').textContent = filtered.filter((word) => word.level === 3).length;
-  $('#focusTextbookCount').textContent = filtered.filter((word) => word.level === 1).length;
+  $('#textbookPracticeCounts').innerHTML = renderPracticeCounts(filtered);
   $('#startTextbookReview').disabled = filtered.length === 0;
   $('#emptyTextbook').classList.toggle('show', filtered.length === 0);
   const groups = new Map();
   filtered.forEach((word) => {
-    const bookKey = `${word.grade}-${word.semester}`;
+    const bookKey = textbookBookKey(word);
     if (!groups.has(bookKey)) groups.set(bookKey, { grade: word.grade, semester: word.semester, units: new Map() });
     const unitName = word.bookUnit || '自定义课时';
     const units = groups.get(bookKey).units;
@@ -646,7 +685,8 @@ function renderTextbook() {
     const bookKey = `${book.grade}-${book.semester}`;
     const bookOpenKey = `book:${bookKey}`;
     const allLessons = [...book.units.values()].flatMap((lessons) => [...lessons.values()]);
-    const bookCount = allLessons.reduce((sum, entries) => sum + entries.length, 0);
+    const bookWords = allLessons.flat();
+    const bookCount = bookWords.length;
     const lessonCount = allLessons.length;
     const unitsHtml = [...book.units.entries()].map(([unitName, lessons]) => {
       const unitOpenKey = `unit:${bookKey}:${unitName}`;
@@ -663,7 +703,15 @@ function renderTextbook() {
       const unitStatusKey = encodeURIComponent(JSON.stringify([String(book.grade), String(book.semester), unitName]));
       return `<details class="textbook-unit" data-open-key="${escapeHtml(unitOpenKey)}" ${openKeys.has(unitOpenKey) ? 'open' : ''}><summary class="textbook-unit-head"><h4>${escapeHtml(unitName)}</h4><div class="hierarchy-summary"><span>${lessons.size} 个课时 · ${unitCount} 个字</span><button type="button" data-status-unit="${unitStatusKey}">批量状态</button></div><i class="hierarchy-toggle"></i></summary><div class="textbook-unit-body">${lessonsHtml}</div></details>`;
     }).join('');
-    return `<details class="textbook-group" data-open-key="${escapeHtml(bookOpenKey)}" ${openKeys.has(bookOpenKey) ? 'open' : ''}><summary class="textbook-group-head"><h3>${gradeText(book.grade)}${semesterText(book.semester)}</h3><div class="hierarchy-summary"><span>${book.units.size} 个单元 · ${lessonCount} 个课时 · ${bookCount} 个字</span><button type="button" data-status-book="${encodeURIComponent(bookKey)}">批量状态</button></div><i class="hierarchy-toggle"></i></summary><div class="textbook-group-body">${unitsHtml}</div></details>`;
+    return `<details class="textbook-group" data-open-key="${escapeHtml(bookOpenKey)}" ${openKeys.has(bookOpenKey) ? 'open' : ''}>
+      <summary class="textbook-group-head">
+        <h3>${gradeText(book.grade)}${semesterText(book.semester)}</h3>
+        <div class="hierarchy-summary"><span>${book.units.size} 个单元 · ${lessonCount} 个课时 · ${bookCount} 个字</span><button type="button" data-status-book="${encodeURIComponent(bookKey)}">批量状态</button></div>
+        <i class="hierarchy-toggle"></i>
+        <div class="practice-stats book-practice-stats" role="group" aria-label="本册按熟悉度复习">${renderPracticeCounts(bookWords, bookKey)}</div>
+      </summary>
+      <div class="textbook-group-body">${unitsHtml}</div>
+    </details>`;
   }).join('');
   pendingOpenLessonKey = null;
   updateLessonSelectionUI();
@@ -766,42 +814,122 @@ function addTextbookWords(event) {
   showToast(isEditing ? '课时字表已保存' : `已录入 ${lessonChars.length - oldByChar.size} 个课本生字`);
 }
 
-function startTextbookReview() {
-  queue = sortTextbookWords(getFilteredTextbookWords()).map((word) => ({ ...word, source: 'textbook' }));
-  if (!queue.length) return;
+function beginTextbookReview(entries, scope, label, { lessonBatch = null, initialMode = 'card' } = {}) {
+  if (!entries.length) return;
+  queue = entries.map((word) => ({ ...word, source: 'textbook' }));
   reviewContext = 'textbook';
-  reviewScope = 'all';
+  reviewScope = scope;
+  reviewScopeLabel = label;
+  lessonPracticeBatch = lessonBatch;
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
-  renderCard();
+  renderCard({ initialMode });
+}
+
+function startTextbookReview() {
+  beginTextbookReview(sortTextbookWords(getFilteredTextbookWords()), 'all', '全部课本');
+}
+
+function startTextbookPracticeLevel(level, bookKey) {
+  if (!PRACTICE_LEVELS.some((item) => item.level === level)) return;
+  const selected = getFilteredTextbookWords().filter((word) => Number(word.level) === level && (!bookKey || textbookBookKey(word) === bookKey));
+  if (!selected.length) return showToast('这个范围没有该分类的字');
+  const scope = bookKey ? `${gradeText(selected[0].grade)}${semesterText(selected[0].semester)}` : '全部课本';
+  beginTextbookReview(sortTextbookWords(selected), 'category', `${scope} · ${practiceLevelLabel(level)}`);
+}
+
+function getLessonPracticeWords(sourceKey) {
+  const key = textbookOverrides[sourceKey]?.currentKey || sourceKey;
+  return sortTextbookWords(textbookWords.filter((word) => lessonKey(word) === key));
+}
+
+function getLessonPracticeGroup(setup, { wrap = true } = {}) {
+  const entries = getLessonPracticeWords(setup.sourceKey);
+  const matches = (word) => setup.level === 'all' || Number(word.level) === setup.level;
+  const available = entries.filter(matches);
+  if (setup.limit === 'all') return { entries: wrap ? available : [], available: available.length, resumed: false };
+  const anchor = lessonPracticePreferences[setup.sourceKey]?.completed?.[setup.level];
+  const position = setup.fromStart ? -1 : entries.findIndex((word) => word.id === anchor);
+  if (!wrap && position < 0) return { entries: [], available: available.length, resumed: false };
+  const following = entries.slice(position + 1).filter(matches);
+  const resumed = position >= 0 && following.length > 0;
+  const candidates = wrap && !resumed ? available : following;
+  return { entries: candidates.slice(0, setup.limit), available: available.length, resumed };
 }
 
 function startLessonReview(key) {
-  queue = sortTextbookWords(textbookWords.filter((word) => lessonKey(word) === key)).map((word) => ({ ...word, source: 'textbook' }));
-  if (!queue.length) return showToast('这个课时还没有生字');
-  reviewContext = 'textbook';
-  reviewScope = 'lesson';
-  queueIndex = 0;
-  reviewedCount = 0;
-  showView('reviewView');
-  renderCard();
+  const sourceKey = Object.keys(textbookOverrides).find((source) => textbookOverrides[source].currentKey === key) || key;
+  const saved = lessonPracticePreferences[sourceKey]?.limit;
+  const limit = saved === 'all' || (Number.isInteger(saved) && saved > 0) ? saved : 5;
+  startLessonPractice({ sourceKey, level: 'all', limit, fromStart: false });
+}
+
+function openLessonPracticeSettings(control) {
+  if (!lessonPracticeBatch || $('#wordCard').matches('.fly-left, .fly-right')) return;
+  stopReadPracticeRecording();
+  const { sourceKey, level, limit } = lessonPracticeBatch;
+  const first = getLessonPracticeWords(sourceKey)[0];
+  if (!first) return showToast('这个课时还没有生字');
+  lessonPracticeSetup = { sourceKey, level, limit, fromStart: false };
+  const choosingCount = control === 'count';
+  $('#lessonPracticeTitle').textContent = choosingCount ? '复习字数' : '复习类型';
+  $('#lessonPracticeBook').textContent = `${gradeText(first.grade)}${semesterText(first.semester)} · ${first.unit || '当前课时'}`;
+  $('#lessonPracticeSize').hidden = !choosingCount;
+  $('#lessonPracticeLevels').hidden = choosingCount;
+  renderLessonPracticeSetup();
+  showDialog($('#lessonPracticeDialog'));
+}
+
+function renderLessonPracticeSetup({ resetInput = true } = {}) {
+  const setup = lessonPracticeSetup;
+  const entries = getLessonPracticeWords(setup.sourceKey);
+  const counts = getPracticeCounts(entries);
+  const group = getLessonPracticeGroup(setup);
+  $('#lessonPracticeLevels').querySelectorAll('[data-lesson-practice-level]').forEach((button) => {
+    const level = button.dataset.lessonPracticeLevel === 'all' ? 'all' : Number(button.dataset.lessonPracticeLevel);
+    const count = level === 'all' ? entries.length : counts[level];
+    button.querySelector('b').textContent = count;
+    button.disabled = count === 0;
+    button.setAttribute('aria-pressed', String(level === setup.level));
+  });
+  const input = $('#lessonPracticeCount');
+  input.disabled = $('#lessonPracticeSize').hidden || group.available === 0;
+  if (resetInput) input.value = String(setup.limit === 'all' ? group.available : setup.limit);
+  $('#lessonPracticePresets').querySelectorAll('button').forEach((button) => {
+    const value = button.dataset.lessonPracticeLimit;
+    button.disabled = group.available === 0;
+    button.setAttribute('aria-pressed', String(value === String(setup.limit) && !button.disabled));
+  });
+  $('#lessonPracticePreview').textContent = group.available
+    ? `本组 ${group.entries.length} 个字，${group.resumed ? '接着上一组' : '按字表顺序'}`
+    : '这个分类还没有字';
+  $('#restartLessonPractice').hidden = !group.resumed;
+  $('#beginLessonPractice').disabled = group.available === 0;
+}
+
+function startLessonPractice(setup, { wrap = true, initialMode = 'card' } = {}) {
+  const { entries } = getLessonPracticeGroup(setup, { wrap });
+  if (!entries.length) return showToast('这个范围没有可继续复习的字');
+  const previous = lessonPracticePreferences[setup.sourceKey];
+  lessonPracticePreferences[setup.sourceKey] = { ...previous, limit: setup.limit };
+  localStorage.setItem(LESSON_PRACTICE_KEY, JSON.stringify(lessonPracticePreferences));
+  const label = `${entries[0].unit || '当前课时'} · ${practiceLevelLabel(setup.level)}`;
+  const lessonBatch = { ...setup, lastWordId: entries.at(-1).id };
+  beginTextbookReview(entries, 'lesson', label, { lessonBatch, initialMode });
+}
+
+function finishLessonPracticeBatch(batch) {
+  const preference = lessonPracticePreferences[batch.sourceKey];
+  preference.completed = { ...preference.completed, [batch.level]: batch.lastWordId };
+  localStorage.setItem(LESSON_PRACTICE_KEY, JSON.stringify(lessonPracticePreferences));
+  return getLessonPracticeGroup({ ...batch, fromStart: false }, { wrap: false }).entries.length > 0;
 }
 
 function startShuffledLessonReview() {
-  const selectedWords = textbookWords.filter((word) => selectedLessonKeys.has(lessonKey(word))).map((word) => ({ ...word, source: 'textbook' }));
+  const selectedWords = textbookWords.filter((word) => selectedLessonKeys.has(lessonKey(word)));
   if (!selectedWords.length) return showToast('请先选择至少一个课时');
-  for (let index = selectedWords.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    [selectedWords[index], selectedWords[randomIndex]] = [selectedWords[randomIndex], selectedWords[index]];
-  }
-  queue = selectedWords;
-  reviewContext = 'textbook';
-  reviewScope = 'combined';
-  queueIndex = 0;
-  reviewedCount = 0;
-  showView('reviewView');
-  renderCard();
+  beginTextbookReview(shuffled(selectedWords), 'combined', '组合课时 · 乱序复习');
 }
 
 function toggleAllVisibleLessons() {
@@ -854,13 +982,14 @@ function startReview() {
   if (!queue.length) return;
   reviewContext = 'daily';
   reviewScope = 'all';
+  lessonPracticeBatch = null;
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
   renderCard();
 }
 
-function renderCard({ preserveMode = false } = {}) {
+function renderCard({ preserveMode = false, initialMode = 'card' } = {}) {
   const word = queue[queueIndex];
   const card = $('#wordCard');
   card.className = 'word-card enter';
@@ -871,12 +1000,19 @@ function renderCard({ preserveMode = false } = {}) {
     ? `${gradeText(word.grade)}${semesterText(word.semester)}${word.unit ? ` · ${word.unit}` : ''}`
     : `${formatDate(word.createdAt)}认识`;
   $('#reviewProgress').textContent = `${queueIndex + 1} / ${queue.length}`;
+  $('#reviewSessionScope').textContent = reviewContext === 'textbook' ? reviewScopeLabel : '先回忆，再翻卡确认';
   $('#progressBar').style.width = `${(queueIndex / queue.length) * 100}%`;
   $('#reviewedCountDisplay').textContent = reviewedCount;
   $('#remainingCount').textContent = queue.length - queueIndex;
   $('#shuffleCurrentLesson').hidden = reviewScope !== 'lesson' || queue.length < 2 || reviewedCount > 0;
+  $('#lessonPracticeToolbar').hidden = !lessonPracticeBatch;
+  if (lessonPracticeBatch) {
+    const { limit, level } = lessonPracticeBatch;
+    $('#currentLessonPracticeCount').textContent = limit === 'all' ? '不限' : `${limit} 个`;
+    $('#currentLessonPracticeType').textContent = practiceLevelLabel(level);
+  }
   $('#revealPrompt').textContent = '先自己读一读，再点卡片听读音和看提示';
-  if (queueIndex === 0 && !preserveMode) prepareReviewModes();
+  if (queueIndex === 0 && !preserveMode) prepareReviewModes(initialMode);
   preloadNeuralAudio(getStudySpeechText(word.char));
 }
 
@@ -923,11 +1059,13 @@ function getStudyWords(wordOrChar) {
   return [...manual, ...getAutomaticStudyWords(char)].filter((term, index, all) => all.indexOf(term) === index).slice(0, 3);
 }
 
-function openWordGroupDialog(char) {
+function openWordGroupDialog(char, proposedWord = '') {
   if (!char) return;
+  const entries = manualStudyWords[char] || [];
+  const canAppend = proposedWord && entries.length < 3 && !entries.includes(proposedWord);
   $('#wordGroupChar').textContent = char;
   $('#wordGroupCharInput').value = char;
-  $('#wordGroupInput').value = (manualStudyWords[char] || []).join(' ');
+  $('#wordGroupInput').value = (canAppend ? [...entries, proposedWord] : entries).join(' ');
   $('#sentenceCustomWordInput').value = '';
   $('#sentenceTextInput').value = '';
   $('#savedSentences').open = false;
@@ -1010,6 +1148,10 @@ function saveManualStudyWords(event) {
       const studyWords = getStudyWords(current);
       $('#memoryCue').innerHTML = `<strong>${escapeHtml(getPinyin(char))}</strong><span>${studyWords.map(escapeHtml).join(' · ') || '大声读一读'}</span>${current.note ? `<small>${escapeHtml(current.note)}</small>` : ''}`;
     }
+    if ($('#readModePanel').classList.contains('active') && readPractice?.entries[readPractice.index]?.char === char && readPractice.result?.suggestedWord) {
+      applyReadPracticeTranscript(readPractice.result.transcript);
+      renderReadPractice();
+    }
   }
   showToast(entries.length ? '组词已保存' : '手动组词已删除');
 }
@@ -1035,7 +1177,7 @@ function shuffleCurrentLesson() {
   reviewedCount = 0;
   renderCard({ preserveMode: true });
   switchReviewMode(activeMode);
-  showToast('本课生字已打乱');
+  showToast('本组生字已打乱');
 }
 
 function showNextCard() {
@@ -1048,6 +1190,7 @@ function showNextCard() {
 }
 
 function switchReviewMode(mode) {
+  stopReadPracticeRecording();
   stopStudySpeech();
   document.querySelectorAll('[data-review-mode]').forEach((button) => button.classList.toggle('active', button.dataset.reviewMode === mode));
   document.querySelectorAll('.review-mode-panel').forEach((panel) => panel.classList.remove('active'));
@@ -1058,10 +1201,15 @@ function switchReviewMode(mode) {
   }
   if (mode === 'pair') renderPairGroup();
   if (mode === 'listen') startListenRound();
+  if (mode === 'read') {
+    stopFeedbackAudio();
+    if (readPractice?.entries !== queue) startReadPractice();
+    else renderReadPractice();
+  }
   if (mode === 'sentence') startSentenceRound();
 }
 
-function prepareReviewModes() {
+function prepareReviewModes(initialMode) {
   pairGroupIndex = 0;
   selectedPairChar = null;
   listenTarget = null;
@@ -1069,8 +1217,8 @@ function prepareReviewModes() {
   sentenceRound = null;
   sentenceAnswer = [];
   $('#listenScore').textContent = '答对 0 个';
-  switchReviewMode('card');
-  renderReviewOverview();
+  switchReviewMode(initialMode);
+  if (initialMode !== 'overview') renderReviewOverview();
 }
 
 function renderReviewOverview() {
@@ -1194,6 +1342,178 @@ function handleListenChoice(event) {
     $('#listenFeedback').textContent = '再听一次，慢慢找';
     setTimeout(() => button.classList.remove('wrong'), 450);
     playListenTarget();
+  }
+}
+
+function startReadPractice() {
+  readPractice = { entries: queue, index: 0, stage: 'char', matches: 0, result: null, hint: '' };
+  renderReadPractice();
+}
+
+function renderReadPractice() {
+  const { entries, index, stage, matches, result, hint } = readPractice;
+  const word = entries[index];
+  const recording = readRecording?.phase;
+  const matched = result?.kind === 'matched';
+  $('#readPracticeProgress').textContent = `${Math.min(index + 1, entries.length)} / ${entries.length} 个字`;
+  $('#readPracticeBoard').hidden = !word;
+  $('#readPracticeComplete').hidden = Boolean(word);
+  const advance = $('#advanceReadPractice');
+  advance.disabled = Boolean(recording);
+  if (!word) {
+    $('#readPracticeSummary').textContent = `本组 ${entries.length} 个字，组词匹配 ${matches} 个。`;
+    advance.textContent = '再练一遍';
+    return;
+  }
+
+  $('#readPracticeChar').textContent = word.char;
+  $('#readPracticeCharStep').setAttribute('aria-current', stage === 'char' ? 'step' : 'false');
+  $('#readPracticeWordStep').setAttribute('aria-current', stage === 'word' ? 'step' : 'false');
+  $('#readPracticePrompt').textContent = stage === 'char' ? '读一读这个字' : '用这个字说一个词';
+  $('#playReadPracticeExample').disabled = Boolean(recording);
+  $('#readPracticeHint').hidden = !hint;
+  $('#readPracticeHint').textContent = hint;
+  const record = $('#recordReadPractice');
+  record.hidden = !BrowserSpeechRecognition;
+  record.disabled = matched || recording === 'starting' || recording === 'processing';
+  record.classList.toggle('recording', recording === 'listening');
+  $('#readPracticeRecordLabel').textContent = {
+    starting: '正在打开麦克风…', listening: '完成录音', processing: '正在识别…',
+  }[recording] || (matched ? '组词匹配成功' : result ? '再录一次' : '开始录音');
+  $('#readPracticeDisclosure').hidden = !BrowserSpeechRecognition;
+  const feedback = $('#readPracticeFeedback');
+  feedback.dataset.result = matched ? 'matched' : '';
+  feedback.textContent = !BrowserSpeechRecognition
+    ? '当前浏览器无法语音识别。iPhone 可以试用 Safari。'
+    : recording === 'listening' ? '正在听，请说话。说完可点「完成录音」。' : result?.message || '';
+  $('#addRecognizedStudyWord').hidden = !result?.suggestedWord;
+  if (stage === 'char') advance.textContent = '继续说词 →';
+  else if (index === entries.length - 1) advance.textContent = matched ? '查看结果 →' : '跳过并完成 →';
+  else advance.textContent = matched ? '下一个字 →' : '跳过这个字 →';
+}
+
+function advanceReadPractice() {
+  if (readRecording) return;
+  stopStudySpeech();
+  if (readPractice.index >= readPractice.entries.length) return startReadPractice();
+  if (readPractice.stage === 'char') readPractice.stage = 'word';
+  else {
+    if (readPractice.result?.kind === 'matched') readPractice.matches += 1;
+    readPractice.index += 1;
+    readPractice.stage = 'char';
+  }
+  readPractice.result = null;
+  readPractice.hint = '';
+  renderReadPractice();
+}
+
+function playReadPracticeExample() {
+  const { entries, index, stage } = readPractice;
+  const word = entries[index];
+  if (!word || readRecording) return;
+  const { char } = word;
+  const example = stage === 'word' && getStudyWords(char).find((term) => [...term].length >= 2);
+  const pinyin = getPinyin(char);
+  readPractice.hint = example || (stage === 'word' ? '试着想一个含有这个字的词语。' : pinyin === '—' ? '' : pinyin);
+  renderReadPractice();
+  speakGameText(example || char);
+}
+
+function normalizeReadTranscript(text) {
+  return text.normalize('NFKC').replace(/[\s\p{P}]/gu, '');
+}
+
+function applyReadPracticeTranscript(transcript) {
+  const { entries, index, stage } = readPractice;
+  const { char } = entries[index];
+  const text = normalizeReadTranscript(transcript);
+  const heard = `我听到「${[...transcript].slice(0, 30).join('')}」。`;
+  if (stage === 'char') {
+    const message = text === char ? '接着说一个词吧！' : '可以再读一次，或继续说词。';
+    readPractice.result = { message: heard + message };
+    return;
+  }
+
+  const suffix = `的${char}`;
+  const spokenWord = text.endsWith(suffix) ? text.slice(0, -suffix.length) : text;
+  const candidates = [...(manualStudyWords[char] || []), ...getAutomaticStudyWords(char)];
+  const match = candidates.find((term) => {
+    const expected = normalizeReadTranscript(term);
+    return expected.includes(char) && [...expected].length >= 2 && (expected === text || expected === spokenWord);
+  });
+  if (match) {
+    readPractice.result = { kind: 'matched', message: `真棒，「${match}」匹配成功！` };
+    return;
+  }
+  const suggestedWord = /^\p{Script=Han}{2,8}$/u.test(spokenWord) && spokenWord.includes(char) ? spokenWord : '';
+  const message = suggestedWord ? '这是新词，可以请家长确认。' : `再试一次，说一个包含「${char}」的词。`;
+  readPractice.result = { message: heard + message, transcript, suggestedWord };
+}
+
+function stopReadPracticeRecording() {
+  if (readRecording) endReadPracticeRecording(readRecording, { abort: true });
+}
+
+function endReadPracticeRecording(recording, { abort = false, message = '' } = {}) {
+  if (readRecording !== recording) return;
+  readRecording = null;
+  clearTimeout(recording.timer);
+  if (abort) recording.recognizer.abort();
+  if (readPractice.entries !== queue) return;
+  if (message) readPractice.result = { message };
+  renderReadPractice();
+}
+
+function toggleReadPracticeRecording() {
+  if (readRecording) {
+    if (readRecording.phase === 'listening') {
+      readRecording.phase = 'processing';
+      renderReadPractice();
+      readRecording.recognizer.stop();
+    }
+    return;
+  }
+  if (!BrowserSpeechRecognition || !readPractice.entries[readPractice.index] || readPractice.result?.kind === 'matched') return;
+  stopStudySpeech();
+  stopFeedbackAudio();
+  readPractice.result = null;
+  const recognizer = new BrowserSpeechRecognition();
+  recognizer.lang = 'zh-CN';
+  recognizer.continuous = false;
+  recognizer.interimResults = false;
+  const recording = { recognizer, phase: 'starting' };
+  const retryMessage = '没听清，再试一次吧。';
+  readRecording = recording;
+  recognizer.onstart = () => {
+    if (readRecording !== recording) return;
+    recording.phase = 'listening';
+    renderReadPractice();
+  };
+  recognizer.onresult = (event) => {
+    if (readRecording !== recording) return;
+    const result = event.results[event.resultIndex ?? 0];
+    const transcript = result?.isFinal ? result[0]?.transcript?.trim() : '';
+    if (!transcript || !normalizeReadTranscript(transcript)) return;
+    applyReadPracticeTranscript(transcript);
+    endReadPracticeRecording(recording, { abort: true });
+  };
+  recognizer.onend = () => endReadPracticeRecording(recording, { message: retryMessage });
+  recognizer.onerror = ({ error }) => {
+    const message = {
+      'not-allowed': '请允许麦克风权限后重试。',
+      'service-not-allowed': '语音识别暂不可用。iPhone 可检查 Siri 是否开启。',
+      'audio-capture': '无法使用麦克风，请检查设备设置。',
+      'network': '语音识别连接失败，请检查网络后重试。',
+      'language-not-supported': '当前浏览器的语音识别不支持普通话。',
+    }[error] || retryMessage;
+    endReadPracticeRecording(recording, { message });
+  };
+  recording.timer = setTimeout(() => endReadPracticeRecording(recording, { abort: true, message: retryMessage }), 15000);
+  renderReadPractice();
+  try {
+    recognizer.start();
+  } catch (error) {
+    endReadPracticeRecording(recording, { message: '无法开始录音，请检查浏览器的麦克风设置后重试。' });
   }
 }
 
@@ -1528,6 +1848,7 @@ function finishReview() {
   saveHistory(history);
   $('#completeSummary').textContent = `你刚刚复习了 ${reviewedCount} 个${reviewContext === 'textbook' ? '课本生' : ''}字，真不错。`;
   $('#backHome').textContent = reviewContext === 'textbook' ? '回到课本识字' : '回到首页';
+  $('#nextLessonPractice').hidden = !lessonPracticeBatch || !finishLessonPracticeBatch(lessonPracticeBatch);
   showView('completeView');
 }
 
@@ -1674,6 +1995,7 @@ function reviewTodayAgain() {
   if (!queue.length) return showToast('今天还没有可重复复习的字');
   reviewContext = 'daily';
   reviewScope = 'all';
+  lessonPracticeBatch = null;
   queueIndex = 0;
   reviewedCount = 0;
   showView('reviewView');
@@ -1751,6 +2073,13 @@ $('#pairModePanel').addEventListener('click', handlePairChoice);
 $('#nextPairGroup').addEventListener('click', nextPairGroup);
 $('#playListenWord').addEventListener('click', playListenTarget);
 $('#listenChoices').addEventListener('click', handleListenChoice);
+$('#recordReadPractice').addEventListener('click', toggleReadPracticeRecording);
+$('#advanceReadPractice').addEventListener('click', advanceReadPractice);
+$('#playReadPracticeExample').addEventListener('click', playReadPracticeExample);
+$('#addRecognizedStudyWord').addEventListener('click', () => {
+  const { entries, index, result } = readPractice;
+  if (result?.suggestedWord) openWordGroupDialog(entries[index].char, result.suggestedWord);
+});
 $('#sentenceTiles').addEventListener('click', chooseSentenceTile);
 $('#sentenceAnswer').addEventListener('click', undoSentenceTile);
 $('#resetSentenceGame').addEventListener('click', resetSentenceRound);
@@ -1782,6 +2111,9 @@ $('#voiceSelect').addEventListener('change', previewSelectedVoice);
 document.querySelectorAll('[data-rating]').forEach((button) => button.addEventListener('click', () => rateWord(Number(button.dataset.rating))));
 $('#backHome').addEventListener('click', returnFromReview);
 $('#reviewAgain').addEventListener('click', reviewAgain);
+$('#nextLessonPractice').addEventListener('click', () => {
+  if (lessonPracticeBatch) startLessonPractice({ ...lessonPracticeBatch, fromStart: false }, { wrap: false });
+});
 $('#homeReviewAgain').addEventListener('click', reviewTodayAgain);
 $('#homeNav').addEventListener('click', () => { showView('homeView'); renderHome(); });
 $('#textbookNav').addEventListener('click', () => { showView('textbookView'); renderTextbook(); });
@@ -1789,6 +2121,48 @@ $('#emptyTextbookAdd').addEventListener('click', () => openTextbookDialog());
 $('#closeTextbook').addEventListener('click', () => closeDialog($('#textbookDialog')));
 $('#textbookForm').addEventListener('submit', addTextbookWords);
 $('#startTextbookReview').addEventListener('click', startTextbookReview);
+$('#textbookView').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-practice-level]');
+  if (!button || button.disabled) return;
+  event.preventDefault();
+  startTextbookPracticeLevel(Number(button.dataset.practiceLevel), button.dataset.practiceBook);
+});
+$('#openLessonPracticeCount').addEventListener('click', () => openLessonPracticeSettings('count'));
+$('#openLessonPracticeType').addEventListener('click', () => openLessonPracticeSettings('type'));
+$('#closeLessonPractice').addEventListener('click', () => closeDialog($('#lessonPracticeDialog')));
+$('#lessonPracticeLevels').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-lesson-practice-level]');
+  if (!button || button.disabled) return;
+  lessonPracticeSetup.level = button.dataset.lessonPracticeLevel === 'all' ? 'all' : Number(button.dataset.lessonPracticeLevel);
+  lessonPracticeSetup.fromStart = false;
+  renderLessonPracticeSetup();
+});
+$('#lessonPracticePresets').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-lesson-practice-limit]');
+  if (!button || button.disabled) return;
+  const limit = button.dataset.lessonPracticeLimit;
+  lessonPracticeSetup.limit = limit === 'all' ? 'all' : Number(limit);
+  renderLessonPracticeSetup();
+});
+$('#lessonPracticeCount').addEventListener('input', (event) => {
+  const limit = event.target.valueAsNumber;
+  if (!Number.isInteger(limit) || limit < 1) return;
+  lessonPracticeSetup.limit = limit;
+  renderLessonPracticeSetup({ resetInput: false });
+});
+$('#restartLessonPractice').addEventListener('click', () => {
+  lessonPracticeSetup.fromStart = true;
+  renderLessonPracticeSetup();
+});
+$('#lessonPracticeForm').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const setup = lessonPracticeSetup;
+  if (!getLessonPracticeGroup(setup).entries.length) return renderLessonPracticeSetup();
+  closeDialog($('#lessonPracticeDialog'));
+  if (setup.limit === lessonPracticeBatch.limit && setup.level === lessonPracticeBatch.level && !setup.fromStart) return;
+  const initialMode = $('[data-review-mode].active')?.dataset.reviewMode || 'card';
+  startLessonPractice(setup, { initialMode });
+});
 $('#shuffleLessonReview').addEventListener('click', startShuffledLessonReview);
 $('#toggleAllLessons').addEventListener('click', toggleAllVisibleLessons);
 $('#selectedStatusButton').addEventListener('click', openSelectedLessonsStatus);
@@ -1863,7 +2237,11 @@ window.addEventListener('offline', () => {
 function refreshVisibleTextbookLessons() {
   if (!document.hidden && $('#textbookView').classList.contains('active')) syncTextbookLessons();
 }
-document.addEventListener('visibilitychange', refreshVisibleTextbookLessons);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopReadPracticeRecording();
+  refreshVisibleTextbookLessons();
+});
+window.addEventListener('pagehide', stopReadPracticeRecording);
 setInterval(refreshVisibleTextbookLessons, 20000);
 migrateLocalTextbookLessons();
 renderHome();
