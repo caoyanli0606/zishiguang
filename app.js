@@ -861,7 +861,7 @@ function getLessonPracticeGroup(setup, { wrap = true } = {}) {
 function startLessonReview(key) {
   const sourceKey = Object.keys(textbookOverrides).find((source) => textbookOverrides[source].currentKey === key) || key;
   const saved = lessonPracticePreferences[sourceKey]?.limit;
-  const limit = saved === 'all' || (Number.isInteger(saved) && saved > 0) ? saved : 5;
+  const limit = Number.isInteger(saved) && saved > 0 ? saved : 'all';
   startLessonPractice({ sourceKey, level: 'all', limit, fromStart: false });
 }
 
@@ -1802,11 +1802,22 @@ function speakNeuralText(text, callbacks = {}) {
   })();
 }
 
+function getReviewCompletionMessage() {
+  const collection = reviewContext === 'textbook' ? textbookWords : words;
+  const reviewedIds = new Set(queue.map((word) => word.id));
+  const entries = lessonPracticeBatch
+    ? getLessonPracticeWords(lessonPracticeBatch.sourceKey)
+    : collection.filter((word) => reviewedIds.has(word.id));
+  const remaining = entries.filter((word) => Number(word.level) !== 3).length;
+  if (remaining) return `圈圈，不认识的字只有${remaining}个了，可以专门复习这${remaining}个字哦，加油！你是最棒的！`;
+  const scope = lessonPracticeBatch ? '本课' : '本轮';
+  return `哈哈，圈圈，${scope}生字全部认识了，但也要经常回来复习哦，你果然是最棒的`;
+}
+
 function rateWord(level) {
-  if (level === 3) speakFeedback('圈圈，你真是太棒了');
-  if (level === 2) speakFeedback('很好，圈圈，下次就认识了');
-  if (level === 1) speakFeedback('圈圈，你要加油哦，我相信你');
   const current = queue[queueIndex];
+  const card = $('#wordCard');
+  if (!current || card.matches('.fly-left, .fly-right')) return;
   const isTextbook = current.source === 'textbook' || reviewContext === 'textbook';
   const collection = isTextbook ? textbookWords : words;
   const word = collection.find((item) => item.id === current.id);
@@ -1833,8 +1844,12 @@ function rateWord(level) {
   else saveWords();
   reviewedCount += 1;
 
-  const card = $('#wordCard');
   card.classList.add(level === 1 ? 'fly-left' : 'fly-right');
+  // Start the summary from the last rating tap so mobile browsers can play it.
+  if (queueIndex === queue.length - 1) speakFeedback(getReviewCompletionMessage());
+  else if (level === 3) speakFeedback('圈圈，你真是太棒了');
+  else if (level === 2) speakFeedback('很好，圈圈，下次就认识了');
+  else if (level === 1) speakFeedback('圈圈，你要加油哦，我相信你');
   setTimeout(() => {
     queueIndex += 1;
     if (queueIndex < queue.length) renderCard();
@@ -1890,7 +1905,11 @@ function speakFeedback(message) {
     activeFeedbackAudio = audio;
     audio.preload = 'auto';
     audio.addEventListener('ended', () => { if (activeFeedbackAudio === audio) activeFeedbackAudio = null; }, { once: true });
-    audio.play().catch(() => speakFeedbackWithSystem(message));
+    audio.play().catch(() => {
+      if (activeFeedbackAudio !== audio) return;
+      activeFeedbackAudio = null;
+      speakFeedbackWithSystem(message);
+    });
     return;
   }
   speakFeedbackWithSystem(message);
