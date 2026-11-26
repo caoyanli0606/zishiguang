@@ -25,6 +25,7 @@ const FEEDBACK_AUDIO_FILES = {
   '很好，圈圈，下次就认识了': './assets/voice-pack/familiar-boy-c.mp3?v=53',
   '圈圈，你要加油哦，我相信你': './assets/voice-pack/again-boy-c.mp3?v=53'
 };
+const REVIEW_SUMMARY_VOICE = './assets/voice-pack/review-summary-boy-c-v1';
 const WORD_FALLBACKS = {
   哥:['哥哥','大哥'],鸦:['乌鸦','鸦片'],蛙:['青蛙','牛蛙'],狗:['小狗','狼狗'],伞:['雨伞','打伞'],兔:['白兔','兔子'],爪:['爪子','鸡爪'],霜:['冰霜','霜花'],弓:['弓箭','拉弓'],吴:['吴国'],页:['页面','书页'],粽:['粽子','粽叶'],煮:['煮饭','煮熟'],蚂:['蚂蚁'],蚁:['蚂蚁','白蚁'],杨:['杨树','白杨'],袍:['长袍','棉袍'],呀:['好呀'],吗:['好吗'],吧:['走吧'],汤:['米汤','菜汤'],蚊:['蚊子','蚊虫'],啊:['好啊'],猴:['猴子','金丝猴'],掰:['掰开'],扛:['扛起','扛枪'],棵:['一棵','棵数'],咕:['咕咚','咕噜'],咚:['咕咚','叮咚'],啦:['来啦'],鹿:['小鹿','梅花鹿'],龟:['乌龟','海龟'],肚:['肚子','肚皮'],帆:['帆船','风帆'],艘:['一艘'],溪:['小溪','溪水'],榕:['榕树'],桐:['梧桐','油桐'],枫:['枫树','枫叶'],桦:['白桦','桦树'],杏:['杏花','杏子'],杉:['水杉','杉树'],蝴:['蝴蝶'],蝶:['蝴蝶','彩蝶'],壶:['水壶','茶壶'],鼻:['鼻子','鼻孔'],勺:['勺子','饭勺'],琴:['钢琴','琴声'],鹊:['喜鹊'],盯:['盯着','盯住'],朱:['朱红','朱砂'],扁:['扁担','扁平'],踩:['踩水','踩踏'],刘:['姓刘'],炒:['炒菜','炒饭'],哎:['哎呀'],哇:['好哇'],晒:['晒太阳','晾晒'],漱:['漱口'],沼:['沼泽'],闸:['水闸','闸门'],羔:['羊羔'],蝗:['蝗虫'],猬:['刺猬'],莓:['草莓'],呜:['呜咽','呜呜'],猩:['猩猩'],鸽:['鸽子','白鸽'],蚯:['蚯蚓'],蚓:['蚯蚓'],骆:['骆驼'],驼:['骆驼','驼峰'],狮:['狮子','海狮'],莺:['黄莺','夜莺'],咏:['歌咏','咏叹'],绦:['丝绦'],袄:['棉袄','夹袄'],鹃:['杜鹃'],籽:['种子','菜籽'],亭:['凉亭','亭子'],瓣:['花瓣','蒜瓣'],蔗:['甘蔗','蔗糖'],葱:['大葱','葱花'],巷:['小巷','街巷'],祭:['祭祖','祭扫'],艾:['艾草'],菊:['菊花'],菠:['菠菜','菠萝'],茄:['茄子','番茄'],炖:['炖肉','炖汤'],蘑:['蘑菇'],菇:['蘑菇','香菇'],饺:['饺子','水饺'],酱:['酱油','果酱'],茸:['毛茸茸','鹿茸'],屎:['眼屎','鸟屎'],婶:['婶婶','大婶'],陀:['陀螺'],螺:['田螺','海螺'],毽:['毽子','踢毽子'],叼:['叼走','叼着'],晌:['晌午','半晌'],棚:['大棚','车棚'],驮:['驮运','驮着'],哩:['好哩'],唉:['唉声叹气'],蹄:['马蹄','蹄子'],鹂:['黄鹂'],盏:['一盏','灯盏'],耷:['耷拉'],咦:['咦呀'],竿:['竹竿','鱼竿'],颈:['颈部','长颈鹿'],袜:['袜子','棉袜'],蜈:['蜈蚣'],蚣:['蜈蚣'],愣:['发愣','愣住'],帚:['扫帚'],桶:['水桶','木桶'],箕:['簸箕'],蔷:['蔷薇'],薇:['蔷薇'],哦:['哦呀'],
   行:['行走','步行','行动'],长:['长江','长城','长短'],只:['一只','船只'],乐:['快乐','欢乐','乐园'],得:['得到','获得'],地:['大地','土地','地方'],着:['看着','听着'],还:['还有','还是'],重:['重要','重量'],朝:['朝向','朝代'],发:['发现','出发'],好:['好人','美好'],少:['多少','很少'],数:['数学','数字'],空:['天空','空气'],更:['更加','更好'],没:['没有','没事'],几:['几个','几天'],觉:['觉得','感觉'],背:['背后','后背'],当:['当时','当天'],种:['种子','种类']
@@ -96,6 +97,7 @@ let activeFeedbackAudio = null;
 let pugGreetingAttempt = 0;
 let neuralAudioContext = null;
 let activeNeuralSource = null;
+let reviewSummaryVoice = null;
 let neuralSpeechRequest = 0;
 let systemVoiceUnlocked = false;
 const preparedNeuralAudio = new Map();
@@ -1210,6 +1212,7 @@ function switchReviewMode(mode) {
 }
 
 function prepareReviewModes(initialMode) {
+  prepareReviewSummaryVoice().catch(() => {});
   pairGroupIndex = 0;
   selectedPairChar = null;
   listenTarget = null;
@@ -1728,16 +1731,20 @@ async function playPreparedNeuralAudio(audio, contextReady, requestId, callbacks
   if (context?.state !== 'running') throw new Error('音频播放不可用');
   const buffer = await withSpeechTimeout(context.decodeAudioData(audio.slice(0)), 2500);
   if (requestId !== neuralSpeechRequest) return;
+  playStudyAudioBuffer(context, buffer, requestId, callbacks);
+}
+
+function playStudyAudioBuffer(context, buffer, requestId, { onstart, onend, offset = 0, duration = buffer.duration } = {}) {
   const source = context.createBufferSource();
   source.buffer = buffer;
   source.connect(context.destination);
   source.onended = () => {
     if (activeNeuralSource === source) activeNeuralSource = null;
-    if (requestId === neuralSpeechRequest) callbacks.onend?.();
+    if (requestId === neuralSpeechRequest) onend?.();
   };
-  source.start(0);
+  source.start(0, offset, duration);
   activeNeuralSource = source;
-  callbacks.onstart?.();
+  onstart?.();
 }
 
 function speakNeuralText(text, callbacks = {}) {
@@ -1802,16 +1809,86 @@ function speakNeuralText(text, callbacks = {}) {
   })();
 }
 
-function getReviewCompletionMessage() {
+function countUnrecognizedReviewWords() {
   const collection = reviewContext === 'textbook' ? textbookWords : words;
   const reviewedIds = new Set(queue.map((word) => word.id));
   const entries = lessonPracticeBatch
     ? getLessonPracticeWords(lessonPracticeBatch.sourceKey)
     : collection.filter((word) => reviewedIds.has(word.id));
-  const remaining = entries.filter((word) => Number(word.level) !== 3).length;
-  if (remaining) return `圈圈，不认识的字只有${remaining}个了，可以专门复习这${remaining}个字哦，加油！你是最棒的！`;
-  const scope = lessonPracticeBatch ? '本课' : '本轮';
-  return `哈哈，圈圈，${scope}生字全部认识了，但也要经常回来复习哦，你果然是最棒的`;
+  return entries.filter((word) => Number(word.level) !== 3).length;
+}
+
+function prepareReviewSummaryVoice() {
+  reviewSummaryVoice ||= (async () => {
+    const [sound, index] = await Promise.all([fetch(`${REVIEW_SUMMARY_VOICE}.mp3`), fetch(`${REVIEW_SUMMARY_VOICE}.json`)]);
+    if (!sound.ok || !index.ok) throw new Error('复习完成语音包读取失败');
+    const [audio, clips] = await Promise.all([sound.arrayBuffer(), index.json()]);
+    return { audio, clips };
+  })().catch((error) => {
+    reviewSummaryVoice = null;
+    throw error;
+  });
+  return reviewSummaryVoice;
+}
+
+async function loadReviewSummaryVoice(context) {
+  const pack = await prepareReviewSummaryVoice();
+  pack.buffer ||= context.decodeAudioData(pack.audio.slice(0)).catch((error) => {
+    pack.buffer = null;
+    throw error;
+  });
+  return { buffer: await pack.buffer, clips: pack.clips };
+}
+
+function reviewNumberClips(count) {
+  const digits = '零一二三四五六七八九';
+  const places = ['', '十', '百', '千'];
+  const units = ['', '万', '亿', '兆', '京'];
+  const groups = String(count).match(/\d{1,4}(?=(?:\d{4})*$)/g);
+  const spoken = groups.map((group, index) => {
+    const text = Array.from(group, (digit, place) => digit === '0' ? '零' : digits[Number(digit)] + places[group.length - 1 - place]).join('').replace(/零+$/, '');
+    return text ? text + units[groups.length - 1 - index] : '零';
+  }).join('').replace(/零+/g, '零').replace(/零$/, '').replace(/^一十/, '十');
+  return Array.from(spoken);
+}
+
+function playNumberedReviewSummary(context, buffer, clips, count, requestId) {
+  const digits = reviewNumberClips(count);
+  const ranges = ['prefix', ...digits, 'middle', ...digits, 'suffix'].map((key) => (
+    clips[key].map((time) => Math.round(time * buffer.sampleRate / 1000))
+  ));
+  const length = ranges.reduce((total, [start, end]) => total + end - start, 0);
+  const sequence = context.createBuffer(1, length, buffer.sampleRate);
+  const samples = buffer.getChannelData(0);
+  let offset = 0;
+  for (const [start, end] of ranges) {
+    sequence.copyToChannel(samples.subarray(start, end), 0, offset);
+    offset += end - start;
+  }
+  playStudyAudioBuffer(context, sequence, requestId);
+}
+
+async function speakReviewCompletion(remaining, isLesson) {
+  stopStudySpeech();
+  stopFeedbackAudio();
+  const requestId = neuralSpeechRequest;
+  try {
+    const context = await unlockStudyPlayback();
+    if (requestId !== neuralSpeechRequest) return;
+    if (context?.state !== 'running') throw new Error('音频播放不可用');
+    const { buffer, clips } = await withSpeechTimeout(loadReviewSummaryVoice(context), 6000);
+    if (requestId !== neuralSpeechRequest) return;
+    const key = remaining ? `count-${remaining}` : isLesson ? 'known-lesson' : 'known-round';
+    const clip = clips[key];
+    if (clip) {
+      const [start, end] = clip;
+      playStudyAudioBuffer(context, buffer, requestId, { offset: start / 1000, duration: (end - start) / 1000 });
+    } else {
+      playNumberedReviewSummary(context, buffer, clips, remaining, requestId);
+    }
+  } catch (error) {
+    if (requestId === neuralSpeechRequest) showToast('完成播报暂时无法播放');
+  }
 }
 
 function rateWord(level) {
@@ -1846,7 +1923,7 @@ function rateWord(level) {
 
   card.classList.add(level === 1 ? 'fly-left' : 'fly-right');
   // Start the summary from the last rating tap so mobile browsers can play it.
-  if (queueIndex === queue.length - 1) speakFeedback(getReviewCompletionMessage());
+  if (queueIndex === queue.length - 1) speakReviewCompletion(countUnrecognizedReviewWords(), Boolean(lessonPracticeBatch));
   else if (level === 3) speakFeedback('圈圈，你真是太棒了');
   else if (level === 2) speakFeedback('很好，圈圈，下次就认识了');
   else if (level === 1) speakFeedback('圈圈，你要加油哦，我相信你');
